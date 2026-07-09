@@ -3,26 +3,36 @@
 /**
  * Code: PaymentConfirmation
  *
- * Cron-based notification that fires automatically when an invoice becomes
- * fully paid, without requiring an admin to trigger it manually.
+ * Instant notification: fires directly off WHMCS's InvoicePaid hook, which
+ * WHMCS triggers exactly once, right when an invoice's balance reaches zero
+ * - whether that happened via an automated gateway payment or an admin
+ * manually recording a payment. There is no separate "admin added a
+ * payment" case to handle: WHMCS routes both through the same InvoicePaid
+ * event once the invoice is actually fully paid.
  *
- * WHMCS does not expose a "just got paid" cron hook, so this scans invoices
- * with status = Paid and datepaid = today, and keeps a small tracking table
- * (mod_ishost_payment_confirmation_sent) so each invoice is only notified
- * once even if the daily cron runs more than once.
+ * WHMCS only gives this hook the invoice id (`$vars['invoiceid']`), so
+ * transformHookParams() below enriches it into the full payload this
+ * notification's parameters need - the same lookup previously used by the
+ * (now removed) daily cron scan.
+ *
+ * A small tracking table (mod_ishost_payment_confirmation_sent) still guards
+ * against sending more than once for the same invoice, in case WHMCS ever
+ * fires InvoicePaid more than once for it.
+ *
+ * @see https://developers.whmcs.com/hooks-reference/invoices-and-quotes/#invoicepaid
  */
 
 namespace Lkn\HookNotification\Notifications\Custom;
 
 use DateTime;
 use Lkn\HookNotification\Core\NotificationReport\Domain\NotificationReportCategory;
-use Lkn\HookNotification\Core\Notification\Domain\AbstractCronNotification;
+use Lkn\HookNotification\Core\Notification\Domain\AbstractNotification;
 use Lkn\HookNotification\Core\Notification\Domain\NotificationParameter;
 use Lkn\HookNotification\Core\Notification\Domain\NotificationParameterCollection;
 use Lkn\HookNotification\Core\Shared\Infrastructure\Hooks;
 use WHMCS\Database\Capsule;
 
-final class PaymentConfirmationNotification extends AbstractCronNotification implements ResendableNotificationInterface
+final class PaymentConfirmationNotification extends AbstractNotification implements ResendableNotificationInterface
 {
     private const WHMCS_DOMAIN = 'https://indianserverhosting.com';
 
@@ -133,7 +143,7 @@ final class PaymentConfirmationNotification extends AbstractCronNotification imp
         parent::__construct(
             'PaymentConfirmation',
             NotificationReportCategory::INVOICE,
-            Hooks::DAILY_CRON_JOB,
+            Hooks::INVOICE_PAID,
             new NotificationParameterCollection($parameters),
             fn () => $this->whmcsHookParams['client_id'],
             fn () => $this->whmcsHookParams['report_category_id'],
@@ -141,58 +151,78 @@ final class PaymentConfirmationNotification extends AbstractCronNotification imp
     }
 
     /**
-     * Builds the payload list fed into the notification: one entry per
-     * invoice that was paid today and hasn't already been notified.
+     * Enriches WHMCS's InvoicePaid hook payload (just `invoiceid`) into the
+     * full set of fields this notification's parameters need, and guards
+     * against sending more than once for the same invoice.
+     *
+     * @param array<mixed> $whmcsHookParams
+     *
+     * @return array<mixed>|null null skips sending (already sent, or invoice not found).
      */
-    public function getPayload(): array
+    public function transformHookParams(array $whmcsHookParams): ?array
     {
-        $this->ensureSentTableExists();
+        $invoiceId = $whmcsHookParams['invoiceid'] ?? $whmcsHookParams['invoice_id'] ?? null;
 
-        $today = (new DateTime('today'))->format('Y-m-d');
-
-        $invoices = Capsule::table('tblinvoices')
-            ->where('status', 'Paid')
-            ->whereDate('datepaid', $today)
-            ->get();
-
-        $payloads = [];
-
-        foreach ($invoices as $invoice) {
-            $alreadySent = Capsule::table(self::SENT_TABLE)
-                ->where('invoice_id', $invoice->id)
-                ->exists();
-
-            if ($alreadySent) {
-                continue;
-            }
-
-            $transaction = Capsule::table('tblaccounts')
-                ->where('invoiceid', $invoice->id)
-                ->orderBy('date', 'desc')
-                ->first();
-
-            $paymentDateTime = $this->resolvePaymentDateTime($transaction, $invoice);
-            $paymentMethod   = $this->resolvePaymentMethodName($transaction, $invoice);
-
-            $payloads[] = [
-                'client_id'           => $invoice->userid,
-                'report_category_id' => $invoice->id,
-                'invoice_id'          => $invoice->id,
-                'invoicenum'          => $invoice->invoicenum,
-                'payment_amount'      => $transaction->amountin ?? $invoice->total,
-                'payment_method'      => $paymentMethod,
-                'transaction_id'      => $transaction->transid ?? '',
-                'payment_date'        => $paymentDateTime->format('Y-m-d'),
-                'payment_time'        => $paymentDateTime->format('H:i:s'),
-            ];
-
-            Capsule::table(self::SENT_TABLE)->insert([
-                'invoice_id' => $invoice->id,
-                'sent_at'    => date('Y-m-d H:i:s'),
-            ]);
+        if (!$invoiceId) {
+            return null;
         }
 
-        return $payloads;
+        $this->ensureSentTableExists();
+
+        $alreadySent = Capsule::table(self::SENT_TABLE)
+            ->where('invoice_id', $invoiceId)
+            ->exists();
+
+        if ($alreadySent) {
+            return null;
+        }
+
+        $payload = $this->buildPayloadForInvoice((int) $invoiceId);
+
+        if ($payload === null) {
+            return null;
+        }
+
+        Capsule::table(self::SENT_TABLE)->insert([
+            'invoice_id' => $invoiceId,
+            'sent_at' => date('Y-m-d H:i:s'),
+        ]);
+
+        return $payload;
+    }
+
+    /**
+     * Builds the full parameter payload for a single invoice's payment,
+     * fresh from the database. Used both by transformHookParams() (instant
+     * send) and buildResendPayload() (manual resend from the Reports page).
+     */
+    private function buildPayloadForInvoice(int $invoiceId): ?array
+    {
+        $invoice = Capsule::table('tblinvoices')->where('id', $invoiceId)->first();
+
+        if ($invoice === null) {
+            return null;
+        }
+
+        $transaction = Capsule::table('tblaccounts')
+            ->where('invoiceid', $invoice->id)
+            ->orderBy('date', 'desc')
+            ->first();
+
+        $paymentDateTime = $this->resolvePaymentDateTime($transaction, $invoice);
+        $paymentMethod   = $this->resolvePaymentMethodName($transaction, $invoice);
+
+        return [
+            'client_id'           => $invoice->userid,
+            'report_category_id' => $invoice->id,
+            'invoice_id'          => $invoice->id,
+            'invoicenum'          => $invoice->invoicenum,
+            'payment_amount'      => $transaction->amountin ?? $invoice->total,
+            'payment_method'      => $paymentMethod,
+            'transaction_id'      => $transaction->transid ?? '',
+            'payment_date'        => $paymentDateTime->format('Y-m-d'),
+            'payment_time'        => $paymentDateTime->format('H:i:s'),
+        ];
     }
 
     private function resolvePaymentDateTime($transaction, $invoice): DateTime
@@ -235,35 +265,11 @@ final class PaymentConfirmationNotification extends AbstractCronNotification imp
     /**
      * Rebuilds the payload for a single invoice's payment, fresh from the
      * database, so this notification can be resent from the Notification
-     * Reports page even after the "already sent today" guard would
-     * otherwise skip it on the next cron run.
+     * Reports page even after the "already sent" guard would otherwise
+     * skip it.
      */
     public function buildResendPayload(int $categoryId, ?int $clientId): ?array
     {
-        $invoice = Capsule::table('tblinvoices')->where('id', $categoryId)->first();
-
-        if ($invoice === null) {
-            return null;
-        }
-
-        $transaction = Capsule::table('tblaccounts')
-            ->where('invoiceid', $invoice->id)
-            ->orderBy('date', 'desc')
-            ->first();
-
-        $paymentDateTime = $this->resolvePaymentDateTime($transaction, $invoice);
-        $paymentMethod   = $this->resolvePaymentMethodName($transaction, $invoice);
-
-        return [
-            'client_id'           => $invoice->userid,
-            'report_category_id' => $invoice->id,
-            'invoice_id'          => $invoice->id,
-            'invoicenum'          => $invoice->invoicenum,
-            'payment_amount'      => $transaction->amountin ?? $invoice->total,
-            'payment_method'      => $paymentMethod,
-            'transaction_id'      => $transaction->transid ?? '',
-            'payment_date'        => $paymentDateTime->format('Y-m-d'),
-            'payment_time'        => $paymentDateTime->format('H:i:s'),
-        ];
+        return $this->buildPayloadForInvoice($categoryId);
     }
 }

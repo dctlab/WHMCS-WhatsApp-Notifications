@@ -25,7 +25,22 @@ final class NotificationService
         array $request
     ): Result {
         try {
-            $platform        = Platforms::from($request['platform']);
+            if (empty($request['platform'])) {
+                return lkn_hn_result(
+                    'error',
+                    errors: ['exception' => lkn_hn_lang('Please select a platform before saving.')]
+                );
+            }
+
+            $platform = Platforms::tryFrom($request['platform']);
+
+            if ($platform === null) {
+                return lkn_hn_result(
+                    'error',
+                    errors: ['exception' => lkn_hn_lang("Unknown platform: [1]", [$request['platform']])]
+                );
+            }
+
             $platformPayload = [];
             $template        = '';
 
@@ -52,7 +67,7 @@ final class NotificationService
             );
 
             return lkn_hn_result('success');
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             return lkn_hn_result(
                 'error',
                 errors: ['exception' => $e->getMessage()]
@@ -179,7 +194,7 @@ final class NotificationService
                 );
 
             return lkn_hn_result('success');
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             return lkn_hn_result(
                 'error',
                 errors: ['exception' => $e->getMessage()]

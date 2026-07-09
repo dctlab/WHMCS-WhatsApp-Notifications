@@ -53,10 +53,18 @@ final class DatabaseSetup
                     `client_id` int DEFAULT NULL,
                     `category_id` bigint unsigned DEFAULT NULL,
                     `queue_id` int DEFAULT NULL,
+                    `resent_from_report_id` int DEFAULT NULL,
                     `category` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
                     `target` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+                    `wa_message_id` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+                    `delivery_status` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+                    `delivery_updated_at` datetime DEFAULT NULL,
+                    `billable` tinyint(1) DEFAULT NULL,
+                    `wa_category` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
                     `status` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
                     `msg` text COLLATE utf8mb4_unicode_ci,
+                    `message_preview` text COLLATE utf8mb4_unicode_ci,
+                    `whmcs_hook_params` longtext COLLATE utf8mb4_unicode_ci,
                     `platform` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
                     `channel` char(2) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
                     `notification` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -64,8 +72,56 @@ final class DatabaseSetup
                     `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
                     PRIMARY KEY (`id`),
                     KEY `fk_queue_id` (`queue_id`),
+                    KEY `idx_wa_message_id` (`wa_message_id`),
+                    KEY `idx_client_id` (`client_id`),
+                    KEY `idx_category` (`category`, `category_id`),
                     CONSTRAINT `fk_queue_id` FOREIGN KEY (`queue_id`) REFERENCES `mod_lkn_hook_notification_notif_queue` (`id`) ON DELETE SET NULL
                 ) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci'
+            );
+
+            $statement->execute();
+
+            $statement = $pdo->prepare(
+                'CREATE TABLE IF NOT EXISTS `mod_lkn_hook_notification_conversations` (
+                    `id` int NOT NULL AUTO_INCREMENT,
+                    `conversation_id` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+                    `client_id` int DEFAULT NULL,
+                    `phone_number` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+                    `category` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+                    `pricing_model` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+                    `billable` tinyint(1) DEFAULT NULL,
+                    `origin_type` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+                    `message_count` int NOT NULL DEFAULT 1,
+                    `first_message_at` datetime DEFAULT NULL,
+                    `last_message_at` datetime DEFAULT NULL,
+                    `last_message_preview` varchar(500) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+                    `last_message_direction` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+                    `expiration_at` datetime DEFAULT NULL,
+                    PRIMARY KEY (`id`),
+                    UNIQUE KEY `uniq_conversation_id` (`conversation_id`),
+                    KEY `idx_client_id` (`client_id`),
+                    KEY `idx_phone_number` (`phone_number`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci'
+            );
+
+            $statement->execute();
+
+            $statement = $pdo->prepare(
+                'CREATE TABLE IF NOT EXISTS `mod_lkn_hook_notification_messages` (
+                    `id` int NOT NULL AUTO_INCREMENT,
+                    `client_id` int DEFAULT NULL,
+                    `phone_number` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+                    `wa_message_id` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+                    `direction` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL,
+                    `message_type` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+                    `body` text COLLATE utf8mb4_unicode_ci,
+                    `status` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+                    `sent_at` datetime NOT NULL,
+                    PRIMARY KEY (`id`),
+                    UNIQUE KEY `uniq_wa_message_id` (`wa_message_id`),
+                    KEY `idx_phone_number` (`phone_number`),
+                    KEY `idx_client_id` (`client_id`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci'
             );
 
             $statement->execute();

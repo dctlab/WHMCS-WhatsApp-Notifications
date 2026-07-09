@@ -30,7 +30,26 @@ function lkn_hn_entrypoint()
         require_once __DIR__ . '/Shared/Infrastructure/helpers.php';
         require_once __DIR__ . '/Platforms/Chatwoot/Infrastructure/live_chat_hooks.php';
 
-        BulkDispatcher::getInstance()->run();
+        // Isolated on purpose: if BulkMessaging fails to load for any reason
+        // (e.g. a missing/stale file from an incomplete deployment), it must
+        // not prevent NotificationHookListener below from registering - that
+        // would silently disable every instant notification (PaymentConfirmation,
+        // TicketOpen, InvoicePaymentReminder, etc.) for the whole request.
+        try {
+            BulkDispatcher::getInstance()->run();
+        } catch (Throwable $th) {
+            lkn_hn_log(
+                'Bulk messaging error',
+                [],
+                [
+                    'msg' => $th->getMessage(),
+                    'file' => $th->getFile(),
+                    'line' => $th->getLine(),
+                    'trace' => $th->getTraceAsString(),
+                    'to_string' => $th->__toString(),
+                ]
+            );
+        }
 
         (new NotificationHookListener())->listen();
 

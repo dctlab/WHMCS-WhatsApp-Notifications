@@ -2,6 +2,7 @@
 
 namespace Lkn\HookNotification\Core\AdminUI\Http\Controllers;
 
+use Lkn\HookNotification\Core\Platforms\Botms\Http\Controllers\BotmsSettingsController;
 use Lkn\HookNotification\Core\Platforms\Chatwoot\Http\Controllers\ChatwootSettingsController;
 use Lkn\HookNotification\Core\Platforms\EvolutionApi\Http\Controllers\EvolutionApiSettingsController;
 use Lkn\HookNotification\Core\Platforms\MetaWhatsApp\Http\Controllers\MetaWhatsAppSettingsController;
@@ -108,6 +109,8 @@ final class SettingsController extends BaseController
             return new MetaWhatsAppSettingsController();
         } elseif ($platform === Platforms::CHATWOOT) {
             return new ChatwootSettingsController();
+        } elseif ($platform === Platforms::BOTMS) {
+            return new BotmsSettingsController();
         }
 
         return null;

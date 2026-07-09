@@ -10,6 +10,7 @@ use Lkn\HookNotification\Core\Platforms\Common\AbstractPlatform;
 use Lkn\HookNotification\Core\Platforms\Common\AbstractPlatformSettings;
 use Lkn\HookNotification\Core\Platforms\Common\PlatformNotificationSendResult;
 use Lkn\HookNotification\Core\Shared\Infrastructure\BaseApiClient;
+use Lkn\HookNotification\Core\Shared\Infrastructure\Result;
 
 final class MetaWhatsAppPlatform extends AbstractPlatform
 {
@@ -57,6 +58,25 @@ final class MetaWhatsAppPlatform extends AbstractPlatform
 
         $filledTemplate = $this->notificationParser->parse($notification, $template);
 
+        if ($filledTemplate instanceof Result) {
+            lkn_hn_log(
+                "{$template->platform->value}: template parsing error",
+                [
+                    'phoneNumber' => $phoneNumber,
+                    'notification' => $notification,
+                    'template' => $template,
+                ],
+                [
+                    'result' => $filledTemplate,
+                ]
+            );
+
+            return new PlatformNotificationSendResult(
+                NotificationReportStatus::ERROR,
+                $filledTemplate->msg ?? 'Failed to build the WhatsApp message from the template (see module log for details).'
+            );
+        }
+
         $apiResponse = $this->apiClient->sendMessageTemplate(
             $phoneNumber,
             $template->template,
@@ -92,6 +112,40 @@ final class MetaWhatsAppPlatform extends AbstractPlatform
             NotificationReportStatus::SENT,
             'The notification was sent.',
             $phoneNumber,
+            $apiResponse->body['messages'][0]['id'] ?? null,
+            $this->buildMessagePreview($filledTemplate),
         );
+    }
+
+    /**
+     * Builds a human-readable preview of what was actually sent, from the
+     * resolved WhatsApp template components (header/body/button parameter
+     * values). This is a snapshot taken at send time - not a reconstruction
+     * of Meta's exact approved template wording (that would need an extra
+     * API call per send) - but it shows exactly which values went out,
+     * which is what the Notification Reports page needs to answer "what did
+     * this client actually receive".
+     *
+     * @param array<int, array{type?: string, parameters?: array<int, array<string, mixed>>}> $filledTemplate
+     */
+    private function buildMessagePreview(array $filledTemplate): ?string
+    {
+        $parts = [];
+
+        foreach ($filledTemplate as $component) {
+            foreach ($component['parameters'] ?? [] as $parameter) {
+                $value = $parameter['text']
+                    ?? $parameter['image']['link']
+                    ?? $parameter['document']['link']
+                    ?? $parameter['video']['link']
+                    ?? null;
+
+                if ($value !== null && $value !== '') {
+                    $parts[] = $value;
+                }
+            }
+        }
+
+        return !empty($parts) ? implode(' | ', $parts) : null;
     }
 }

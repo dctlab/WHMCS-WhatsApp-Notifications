@@ -46,25 +46,27 @@ final class NotificationHookListener
                 continue;
             }
 
-            add_hook(
-                $notification->hook->value,
-                $notification->priority,
-                function (?array $whmcsHookParams = []) use ($notification) {
-                    try {
-                        $this->notificationSender->dispatchNotification($notification, $whmcsHookParams);
-                    } catch (Throwable $th) {
-                        lkn_hn_log(
-                            'listener error',
-                            [
-                                'notification' => $notification,
-                            ],
-                            [
-                                'exception' => $th->__toString(),
-                            ]
-                        );
-                    }
+            $dispatch = function (?array $whmcsHookParams = []) use ($notification) {
+                try {
+                    $this->notificationSender->dispatchNotification($notification, $whmcsHookParams);
+                } catch (Throwable $th) {
+                    lkn_hn_log(
+                        'listener error',
+                        [
+                            'notification' => $notification,
+                        ],
+                        [
+                            'exception' => $th->__toString(),
+                        ]
+                    );
                 }
-            );
+            };
+
+            add_hook($notification->hook->value, $notification->priority, $dispatch);
+
+            foreach ($notification->additionalHooks() as $extraHook) {
+                add_hook($extraHook->value, $notification->priority, $dispatch);
+            }
         }
     }
 }

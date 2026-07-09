@@ -20,6 +20,7 @@ final class View
         $this->smarty->assign('lkn_hn_custom_fields', lkn_hn_get_client_custom_fields_for_view());
         $this->smarty->assign('lkn_hn_layout_path', __DIR__ . '/../../../AdminUI/Http/Views');
         $this->smarty->assign('lkn_hn_base_endpoint', '?module=lknhooknotification');
+        $this->smarty->assign('lkn_hn_api_base_url', lkn_hn_get_module_root_url() . '/src/Core/api.php');
         $this->smarty->registerPlugin('function', 'lkn_hn_lang', 'lkn_hn_lang');
     }
 

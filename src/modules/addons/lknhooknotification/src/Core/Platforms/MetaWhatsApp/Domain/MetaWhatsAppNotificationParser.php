@@ -112,6 +112,14 @@ final class MetaWhatsAppNotificationParser extends AbstractNotificationParser
 
         switch ($headerType) {
             case 'text':
+                if ($paramReplacement === null || $paramReplacement === '') {
+                    return new Result(
+                        code: 'empty-parameter-value',
+                        msg: "Header parameter '$headerParamCode' resolved to an empty value. WhatsApp does not allow empty text parameters in a template message.",
+                        data: ['paramCode' => $headerParamCode]
+                    );
+                }
+
                 $parsedHeaderComponent['parameters'][0] = [
                     ...$parsedHeaderComponent['parameters'][0],
                     'text' => $paramReplacement,
@@ -190,6 +198,14 @@ final class MetaWhatsAppNotificationParser extends AbstractNotificationParser
 
                 switch ($paramType) {
                     case 'text':
+                        if ($paramReplacement === null || $paramReplacement === '') {
+                            return new Result(
+                                code: 'empty-parameter-value',
+                                msg: "Parameter '$paramCode' resolved to an empty value. WhatsApp does not allow empty text parameters in a template message; check the data source for this field on this notification (e.g. a WHMCS field or custom field that is blank for this record).",
+                                data: ['paramCode' => $paramCode]
+                            );
+                        }
+
                         $paramComponent[$paramType] = $paramReplacement;
 
                         break;
@@ -255,6 +271,14 @@ final class MetaWhatsAppNotificationParser extends AbstractNotificationParser
                         }
 
                         $paramReplacement = $paramParser();
+
+                        if ($paramReplacement === null || $paramReplacement === '') {
+                            return new Result(
+                                'empty-parameter-value',
+                                msg: "Button parameter '$paramCode' resolved to an empty value. WhatsApp does not allow empty text parameters in a template message.",
+                                data: ['paramAssoc' => $paramAssoc]
+                            );
+                        }
 
                         $paramComponent = [
                             'type' => $paramType,

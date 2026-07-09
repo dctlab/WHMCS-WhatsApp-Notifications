@@ -64,6 +64,17 @@ return [
         ],
     ],
     [
+        'separator' => true,
+        'title' => lkn_hn_lang('Admin/staff WhatsApp alerts'),
+        'description' => lkn_hn_lang('Number used by notifications meant for your team (not the client), e.g. "a new ticket was opened" or "a client replied to a ticket".'),
+    ],
+    [
+        'setting' => Settings::ADMIN_ALERT_WHATSAPP_NUMBER,
+        'label' => lkn_hn_lang('Admin/staff WhatsApp number'),
+        'description' => lkn_hn_lang('Include country and area code, no spaces or symbols (e.g. 15551234567). Leave blank to disable admin-facing notifications.'),
+        'type' => 'text',
+    ],
+    [
         'setting' => Settings::BD_CUSTOM_FIELD_ID,
         'label' => lkn_hn_lang('Birthdate Custom Field ID'),
         'description' => lkn_hn_lang("Select the custom field corresponding to the customer's date of birth; the default date format is defined in the general settings of WHMCS and is currently configured as: ").Capsule::table('tblconfiguration')->where('setting', 'DateFormat')->value('value'),

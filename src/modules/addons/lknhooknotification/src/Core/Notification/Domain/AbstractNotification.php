@@ -106,6 +106,48 @@ abstract class AbstractNotification
         return true;
     }
 
+    /**
+     * Lets a notification listen on more than one WHMCS hook, in addition to
+     * its primary $this->hook (e.g. an invoice can be created via a client
+     * order/cron generation, which fires InvoiceCreated, OR created directly
+     * in the admin area, which WHMCS does NOT route through InvoiceCreated -
+     * it fires the separate InvoiceCreationAdminArea hook instead).
+     *
+     * Every hook returned here dispatches through the exact same
+     * transformHookParams()/parameters as the primary hook.
+     *
+     * @return Hooks[]
+     */
+    public function additionalHooks(): array
+    {
+        return [];
+    }
+
+    /**
+     * Lets a hook-triggered notification transform/enrich the raw WHMCS hook
+     * params before they're used to resolve this notification's parameters
+     * and dispatched to the platform.
+     *
+     * Some WHMCS hooks are very sparse (e.g. InvoicePaid only provides
+     * `invoiceid`), while a notification's parameter closures may need much
+     * more (client id, invoice number, totals, etc). Override this to look
+     * up and return the full payload your parameters need.
+     *
+     * Returning null skips sending entirely for this event (e.g. to
+     * implement a "send once" dedup guard, or to ignore an event that
+     * doesn't apply).
+     *
+     * Default: no transformation.
+     *
+     * @param  array<mixed> $whmcsHookParams
+     *
+     * @return array<mixed>|null
+     */
+    public function transformHookParams(array $whmcsHookParams): ?array
+    {
+        return $whmcsHookParams;
+    }
+
     public function fillTemplate(NotificationTemplate $template): string
     {
         $parameterCodesInTemplate = $template->getUsedParameterCodes();

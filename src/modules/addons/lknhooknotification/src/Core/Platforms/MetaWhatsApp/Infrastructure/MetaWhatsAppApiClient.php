@@ -216,4 +216,39 @@ final class MetaWhatsAppApiClient extends BaseApiClient
 
         return $apiResponse;
     }
+
+    /**
+     * Sends a free-form text message (not a pre-approved template).
+     *
+     * Only works if the recipient has messaged the business within the last
+     * 24 hours (Meta's "customer service window"); otherwise Meta rejects it
+     * and an approved template must be used instead.
+     *
+     * @see https://developers.facebook.com/docs/whatsapp/cloud-api/guides/send-messages
+     *
+     * @since 4.5.7
+     */
+    public function sendTextMessage(string $toPhoneNumber, string $text): ApiResponse
+    {
+        $requestBody = [
+            'messaging_product' => 'whatsapp',
+            'recipient_type' => 'individual',
+            'to' => $toPhoneNumber,
+            'type' => 'text',
+            'text' => ['body' => $text],
+        ];
+
+        $apiResponse = $this->apiCloud('POST', 'messages', $requestBody);
+
+        lkn_hn_log(
+            Platforms::WHATSAPP->value . ': sendTextMessage',
+            [
+                'toPhoneNumber' => $toPhoneNumber,
+                'requestBody' => $requestBody,
+            ],
+            $apiResponse,
+        );
+
+        return $apiResponse;
+    }
 }

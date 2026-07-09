@@ -26,6 +26,10 @@ final class PlatformService
             $enabledPlatforms[] = Platforms::BAILEYS;
         }
 
+        if (lkn_hn_config(Settings::BOTMS_ENABLE)) {
+            $enabledPlatforms[] = Platforms::BOTMS;
+        }
+
         if (lkn_hn_config(Settings::WP_META_ENABLE)) {
             $enabledPlatforms[] = Platforms::WHATSAPP;
         }

@@ -27,6 +27,7 @@ final class SettingsService
     {
         $platformFolder = match ($platform) {
             Platforms::BAILEYS => 'Baileys',
+            Platforms::BOTMS => 'Botms',
             Platforms::WP_EVO => 'EvolutionApi',
             Platforms::WHATSAPP => 'MetaWhatsApp',
             Platforms::CHATWOOT => 'Chatwoot',

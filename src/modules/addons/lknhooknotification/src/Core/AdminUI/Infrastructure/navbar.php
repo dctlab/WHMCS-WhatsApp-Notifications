@@ -21,6 +21,16 @@ return [
             'icon' => 'fal fa-table',
         ],
         [
+            'label' => lkn_hn_lang('Message Analytics'),
+            'endpoint' => 'notification-analytics',
+            'icon' => 'fal fa-chart-bar',
+        ],
+        [
+            'label' => lkn_hn_lang('WhatsApp Conversations'),
+            'endpoint' => 'notification-chat',
+            'icon' => 'fal fa-comments-alt',
+        ],
+        [
             'label' => lkn_hn_lang('Bulk Messages'),
             'icon' => 'far fa-mail-bulk',
             'endpoint' => 'bulk/list',
@@ -51,6 +61,12 @@ return [
                 [
                     'label' => lkn_hn_lang('Baileys'),
                     'endpoint' => 'platforms/baileys/settings',
+                    'icon' => 'fal fa-cog',
+                    'block' => LicenseService::getInstance()->mustBlockProFeatures(),
+                ],
+                [
+                    'label' => lkn_hn_lang('Botms.in'),
+                    'endpoint' => 'platforms/botms/settings',
                     'icon' => 'fal fa-cog',
                     'block' => LicenseService::getInstance()->mustBlockProFeatures(),
                 ],
@@ -91,7 +107,7 @@ return [
                 ],
                 [
                     'icon' => 'glyphicon glyphicon-download',
-                    'label' => 'v4.3.4',
+                    'label' => 'v4.5.33',
                     'external' => true,
                     'url' => 'https://github.com/LinkNacional/whmcs-whatsapp-api-notifications-open-source/releases'
                 ]

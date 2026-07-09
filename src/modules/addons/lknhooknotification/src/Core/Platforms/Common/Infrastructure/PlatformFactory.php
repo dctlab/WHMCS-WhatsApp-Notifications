@@ -4,6 +4,7 @@ namespace Lkn\HookNotification\Core\Platforms\Common\Infrastructure;
 
 use InvalidArgumentException;
 use Lkn\HookNotification\Core\Platforms\Baileys\Domain\BaileysPlatform;
+use Lkn\HookNotification\Core\Platforms\Botms\Domain\BotmsPlatform;
 use Lkn\HookNotification\Core\Platforms\Chatwoot\Domain\ChatwootPlatform;
 use Lkn\HookNotification\Core\Platforms\Common\AbstractPlatform;
 use Lkn\HookNotification\Core\Platforms\EvolutionApi\Domain\EvolutionApiNotificationParser;
@@ -32,6 +33,7 @@ final class PlatformFactory
 
         return match ($platform) {
             Platforms::BAILEYS => $this->makeBaileys($raw),
+            Platforms::BOTMS => $this->makeBotms($raw),
             Platforms::WP_EVO => $this->makeEvolution($raw),
             Platforms::WHATSAPP => $this->makeMetaWhatsApp($raw),
             Platforms::CHATWOOT => $this->makeChatwoot($raw),
@@ -45,6 +47,7 @@ final class PlatformFactory
 
         return match ($platform) {
             Platforms::BAILEYS => $this->settingsFactory->makeBaileysSettings($raw),
+            Platforms::BOTMS => $this->settingsFactory->makeBotmsSettings($raw),
             Platforms::WP_EVO => $this->settingsFactory->makeEvolutionApiSettings($raw),
             Platforms::WHATSAPP => $this->settingsFactory->makeMetaWhatsAppSettings(),
             Platforms::CHATWOOT => $this->settingsFactory->makeChatwootSettings(
@@ -62,6 +65,14 @@ final class PlatformFactory
         $client   = $this->apiClientFactory->makeBaileysClient($settings);
 
         return new BaileysPlatform($settings, new EvolutionApiNotificationParser(), $client);
+    }
+
+    private function makeBotms(array $raw): BotmsPlatform
+    {
+        $settings = $this->settingsFactory::makeBotmsSettings($raw);
+        $client   = $this->apiClientFactory->makeBotmsClient($settings);
+
+        return new BotmsPlatform($settings, new EvolutionApiNotificationParser(), $client);
     }
 
     private function makeEvolution(array $raw): EvolutionApiPlatform

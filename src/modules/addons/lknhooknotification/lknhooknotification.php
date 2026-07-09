@@ -23,7 +23,7 @@ function lknhooknotification_config()
         $language = 'english';
     }
 
-    $version = '4.4.0'; // CHANGE MANUALLY ON RELEASE
+    $version = '4.5.33'; // CHANGE MANUALLY ON RELEASE
 
     return [
         'name' => lkn_hn_lang('WhatsApp and Chatwoot'),
@@ -122,6 +122,34 @@ function lknhooknotification_upgrade($vars): void
         DatabaseUpgrade::v430();
     }
 
+    if (version_compare($currentlyInstalledVersion, '4.5.0', '<')) {
+        DatabaseUpgrade::v450();
+    }
+
+    if (version_compare($currentlyInstalledVersion, '4.5.1', '<')) {
+        DatabaseUpgrade::v451();
+    }
+
+    if (version_compare($currentlyInstalledVersion, '4.5.6', '<')) {
+        DatabaseUpgrade::v452();
+    }
+
+    if (version_compare($currentlyInstalledVersion, '4.5.7', '<')) {
+        DatabaseUpgrade::v453();
+    }
+
+    if (version_compare($currentlyInstalledVersion, '4.5.8', '<')) {
+        DatabaseUpgrade::v454();
+    }
+
+    if (version_compare($currentlyInstalledVersion, '4.5.13', '<')) {
+        DatabaseUpgrade::v455();
+    }
+
+    // ensureDeliveryTrackingSchema() (introduced in 4.5.3) also self-heals
+    // v450-v455 on every request as a safety net, in case this _upgrade()
+    // hook was never triggered by WHMCS after a file update.
+
     (new Smarty())->clearAllCache();
     header('Cache-Control: no-cache, must-revalidate');
     header('Expires: Mon, 26 Jul 1997 05:00:00 GMT');
@@ -155,6 +183,8 @@ function lknhooknotification_activate(): array
 function lknhooknotification_output(array $vars): void
 {
     try {
+        DatabaseUpgrade::ensureDeliveryTrackingSchema();
+
         $receivedRoute = isset($_REQUEST['page']) ? strip_tags($_REQUEST['page']) : 'home';
 
         echo (new AdminUIRenderer())->getView($receivedRoute);

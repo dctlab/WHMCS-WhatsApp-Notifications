@@ -205,11 +205,12 @@ function lkn_hn_config(Settings $setting)
             Settings::WP_EVO_WP_NUMBER_CUSTOM_FIELD_ID,
             Settings::WP_CUSTOM_FIELD_ID,
             Settings::BAILEYS_WP_CUSTOM_FIELD_ID,
+            Settings::BOTMS_WP_CUSTOM_FIELD_ID,
             Settings::CW_WP_CUSTOM_FIELD_ID,
             Settings::WP_USE_TICKET_WHATSAPP_CF_WHEN_SET,
         ])
     ) {
-        $parsed_value = is_numeric($parsed_value) ? $parsed_value : null;
+        $parsed_value = is_numeric($parsed_value) ? (int) $parsed_value : null;
     }
 
     return $parsed_value;
@@ -226,7 +227,7 @@ function lkn_hn_config_set(Platforms $platform, Settings $setting, $value)
     lkn_hn_log(
         'Upsert setting',
         ['setting' => $setting->name, 'value' => $value],
-        ['result' > $result]
+        ['result' => $result]
     );
 }
 
@@ -268,13 +269,102 @@ function lkn_hn_get_system_locale(): string
     return $parsedClientLang['locale'];
 }
 
-function lkn_hn_get_admin_root_url(string $resource = ''): string
+/**
+ * Human-readable label for a Meta WhatsApp conversation category.
+ *
+ * Meta categories: marketing, utility, authentication,
+ * authentication_international (a higher-priced variant of authentication
+ * used for some international routes), service, and referral_conversion.
+ *
+ * @since 4.5.8
+ */
+function lkn_hn_wa_category_label(?string $category): string
+{
+    return match ($category) {
+        'marketing' => lkn_hn_lang('Marketing'),
+        'utility' => lkn_hn_lang('Utility'),
+        'authentication' => lkn_hn_lang('Authentication'),
+        'authentication_international' => lkn_hn_lang('Authentication (International)'),
+        'service' => lkn_hn_lang('Service'),
+        'referral_conversion' => lkn_hn_lang('Referral Conversion'),
+        null => lkn_hn_lang('Unknown'),
+        default => ucfirst(str_replace('_', ' ', $category)),
+    };
+}
+
+/**
+ * @return array<int, array{label: string, value: string}>
+ */
+function lkn_hn_wa_category_options(): array
+{
+    return [
+        ['label' => lkn_hn_lang('Marketing'), 'value' => 'marketing'],
+        ['label' => lkn_hn_lang('Utility'), 'value' => 'utility'],
+        ['label' => lkn_hn_lang('Authentication'), 'value' => 'authentication'],
+        ['label' => lkn_hn_lang('Authentication (International)'), 'value' => 'authentication_international'],
+        ['label' => lkn_hn_lang('Service'), 'value' => 'service'],
+        ['label' => lkn_hn_lang('Referral Conversion'), 'value' => 'referral_conversion'],
+    ];
+}
+
+
 {
     /**  @var \WHMCS\Config\Application $whmcsConfig */
     $whmcsConfig = $GLOBALS['whmcsAppConfig'];
     $siteRootUrl = rtrim($GLOBALS['CONFIG']['Domain'], '/');
 
     return rtrim("$siteRootUrl/" . $whmcsConfig->OffsetGet('customadminpath') . "/$resource", '/');
+}
+
+/**
+ * Returns the absolute base URL for this module's folder
+ * (`{siteRoot}/modules/addons/lknhooknotification`).
+ *
+ * Unlike lkn_hn_get_admin_root_url(), this does NOT use the custom admin
+ * path: `modules/addons` is served from the WHMCS site root regardless of
+ * where the admin area lives (and regardless of which admin script/page
+ * this helper is called from), so it must never be derived from
+ * $_SERVER['SCRIPT_NAME'].
+ *
+ * Uses tblconfiguration.SystemURL (the same source WHMCS itself uses for
+ * absolute links, e.g. cron/notification URLs), rather than
+ * $GLOBALS['CONFIG']['Domain'], which is not reliably populated with the
+ * site's base URL in every WHMCS install/context.
+ *
+ * @since 4.5.2
+ */
+function lkn_hn_get_module_root_url(): string
+{
+    $systemUrl = Capsule::table('tblconfiguration')->where('setting', 'SystemURL')->value('value');
+
+    if (!$systemUrl) {
+        // Last-resort fallback; SystemURL should always be set on a working WHMCS install.
+        $systemUrl = $GLOBALS['CONFIG']['Domain'] ?? '';
+    }
+
+    return rtrim((string) $systemUrl, '/') . '/modules/addons/lknhooknotification';
+}
+
+/**
+ * Returns the public callback URL Meta must call for the WhatsApp Cloud API
+ * status webhook (delivery status + conversation events).
+ *
+ * @since 4.5.2
+ */
+function lkn_hn_get_whatsapp_webhook_url(): string
+{
+    return lkn_hn_get_module_root_url() . '/src/Core/api.php?endpoint=whatsapp/webhook';
+}
+
+/**
+ * Returns the public callback URL botms.in must call with events (incoming
+ * messages, connection status, disconnects, battery, etc).
+ *
+ * @since 4.5.14
+ */
+function lkn_hn_get_botms_webhook_url(): string
+{
+    return lkn_hn_get_module_root_url() . '/src/Core/api.php?endpoint=botms/webhook';
 }
 
 function lkn_hn_normalize_person_name(string $name): string
@@ -329,3 +419,24 @@ function lkn_hn_mask_value(string $contact): string
         return str_repeat('*', strlen($contact) - 4) . substr($contact, -4);
     }
 };
+
+/**
+ * Strips everything but digits from a phone number, so numbers coming from
+ * different sources (Meta's `from`/`recipient_id`, a stored `target`, a
+ * WHMCS client's phone field) can be reliably compared regardless of `+`,
+ * spaces, dashes or parentheses.
+ *
+ * @since 4.5.5
+ */
+function lkn_hn_normalize_phone_digits(?string $phone): ?string
+{
+    if ($phone === null || $phone === '') {
+        return null;
+    }
+
+    $digits = preg_replace('/\D+/', '', $phone);
+
+    return $digits === '' ? null : $digits;
+}
+
+

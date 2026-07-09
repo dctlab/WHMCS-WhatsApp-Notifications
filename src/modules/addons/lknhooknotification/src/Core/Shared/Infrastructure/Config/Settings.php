@@ -15,6 +15,15 @@ enum Settings: string
     case WP_MSG_TEMPLATE_LANG                   = 'wp_msg_template_lang';
     case WP_VERSION                             = 'wp_api_version';
     case WP_META_ENABLE                         = 'wp_meta_enable';
+    case WP_WEBHOOK_VERIFY_TOKEN                = 'wp_webhook_verify_token';
+    case WP_2FA_TEMPLATE_NAME                   = 'wp_2fa_template_name';
+    case WP_2FA_TEMPLATE_HAS_BUTTON             = 'wp_2fa_template_has_button';
+    case WP_CHARGE_CURRENCY                     = 'wp_charge_currency';
+    case WP_RATE_MARKETING                      = 'wp_rate_marketing';
+    case WP_RATE_UTILITY                        = 'wp_rate_utility';
+    case WP_RATE_AUTHENTICATION                 = 'wp_rate_authentication';
+    case WP_RATE_AUTHENTICATION_INTL             = 'wp_rate_authentication_intl';
+    case WP_RATE_SERVICE                        = 'wp_rate_service';
 
     case CW_ACCOUNT_ID         = 'account_id';
     case CW_URL                = 'url';
@@ -48,6 +57,11 @@ enum Settings: string
     case BAILEYS_ENDPOINT_URL       = 'baileys_endpoint_url';
     case BAILEYS_API_KEY            = 'baileys_api_key';
     case BAILEYS_WP_CUSTOM_FIELD_ID = 'baileys_wp_custom_field_id';
+    case BOTMS_ENABLE               = 'enable_botms';
+    case BOTMS_INSTANCE_ID          = 'botms_instance_id';
+    case BOTMS_ACCESS_TOKEN         = 'botms_access_token';
+    case BOTMS_WP_CUSTOM_FIELD_ID   = 'botms_wp_custom_field_id';
+    case BOTMS_WEBHOOK_REGISTERED_AT = 'botms_webhook_registered_at';
 
     case ENABLE_LOG                        = 'enable_log';
     case LKN_LICENSE                       = 'lkn_license';
@@ -60,6 +74,7 @@ enum Settings: string
     case MODULE_DISMISS_V400_ALERT         = 'mod_dimiss_v400_alert';
 
     case TICKET_WP_CUSTOM_FIELD_ID = 'ticket_wp_custom_field_id';
+    case ADMIN_ALERT_WHATSAPP_NUMBER = 'admin_alert_whatsapp_number';
     case WP_CUSTOM_FIELD_ID        = 'wp_custom_field_id';
 
     case LANGUAGE = 'language';

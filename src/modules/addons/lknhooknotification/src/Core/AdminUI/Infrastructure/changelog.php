@@ -2,6 +2,268 @@
 
 return [
     [
+        'version' => '4.5.33',
+        'date' => '2026-07-10',
+        'changes' => [
+            'New: Meta support for the WhatsApp Verification 2FA module - new "2FA Authentication Template Name" setting under WhatsApp Meta.',
+        ],
+    ],
+    [
+        'version' => '4.5.32',
+        'date' => '2026-07-10',
+        'changes' => [
+            'Hardened: a BulkDispatcher failure no longer silently prevents all instant notifications from registering - isolated into its own error boundary.',
+        ],
+    ],
+    [
+        'version' => '4.5.31',
+        'date' => '2026-07-10',
+        'changes' => [
+            'Changed: widened the module\'s page layout cap from 1280px to 1880px across every page, reducing horizontal scrolling on wide tables like Notification Reports.',
+        ],
+    ],
+    [
+        'version' => '4.5.30',
+        'date' => '2026-07-10',
+        'changes' => [
+            'Fix: Resend/Delete buttons were wrapping to a second line instead of staying side by side.',
+            'Changed: tightened table padding and column widths to reduce horizontal scrolling.',
+        ],
+    ],
+    [
+        'version' => '4.5.29',
+        'date' => '2026-07-10',
+        'changes' => [
+            'Changed: Resend/Delete are now icon-only grouped buttons with tooltips on Notification Reports.',
+            'Changed: Per Page selector applies immediately on change.',
+        ],
+    ],
+    [
+        'version' => '4.5.28',
+        'date' => '2026-07-10',
+        'changes' => [
+            'New: Bulk Action (Resend/Delete) on Notification Reports with row checkboxes and select-all.',
+            'New: Per Page selector (10/25/50/100) on Notification Reports.',
+        ],
+    ],
+    [
+        'version' => '4.5.27',
+        'date' => '2026-07-10',
+        'changes' => [
+            'Fix: InvoicePaymentReminder/InvoiceOverdueReminder crashed on every attempt (Unknown column "qty") - tblinvoiceitems has no such column. Now uses amount instead. This is why nothing was appearing in Notification Reports before.',
+            'Note: invoices that hit the crash earlier today are already claimed as "sent today" by the duplicate-send guard - test on a fresh invoice, or check again tomorrow.',
+        ],
+    ],
+    [
+        'version' => '4.5.26',
+        'date' => '2026-07-10',
+        'changes' => [
+            'Fix: TicketReplied/AdminTicketUserReplied crashed with a SQL error looking up the reply text - wrong column name (ticketid instead of tid).',
+            'Hardened: InvoicePaymentReminder/InvoiceOverdueReminder dedup is now an atomic, database-enforced claim instead of check-then-insert, closing a possible duplicate-send race.',
+        ],
+    ],
+    [
+        'version' => '4.5.25',
+        'date' => '2026-07-10',
+        'changes' => [
+            'Fix: InvoicePaymentReminder/InvoiceOverdueReminder now also fire when an admin manually clicks "Send Email" on an invoice, not just on WHMCS\'s automated reminder cron.',
+        ],
+    ],
+    [
+        'version' => '4.5.24',
+        'date' => '2026-07-10',
+        'changes' => [
+            'New: Botms.in "Connection Closed"/"Send failed" errors now include a plain-language hint in Notification Reports pointing to the fix (reconnect the WhatsApp session in your Botms.in dashboard).',
+        ],
+    ],
+    [
+        'version' => '4.5.23',
+        'date' => '2026-07-09',
+        'changes' => [
+            'New: InvoicePaymentReminder and InvoiceOverdueReminder notifications, both driven by WHMCS\'s own reminder automation, auto-split by due date.',
+        ],
+    ],
+    [
+        'version' => '4.5.22',
+        'date' => '2026-07-09',
+        'changes' => [
+            'New: ModuleSuspended and ModuleUnsuspended notifications - Client First/Last/Full Name, Message Signature, WHMCS Domain, Product Name, Product Domain.',
+        ],
+    ],
+    [
+        'version' => '4.5.21',
+        'date' => '2026-07-09',
+        'changes' => [
+            'Changed: replaced {{ticket_reply_time_bahasa}} with {{ticket_reply_time_whmcs}}, formatted using WHMCS\'s own configured Date Format instead of Indonesian.',
+        ],
+    ],
+    [
+        'version' => '4.5.20',
+        'date' => '2026-07-09',
+        'changes' => [
+            'New: 6 instant notifications - ProductTermination, NewClientRegistration, TicketOpen, TicketReplied, AdminTicketOpened, AdminTicketUserReplied.',
+            'New: Admin/staff WhatsApp alert number setting (Settings → Module), used by the two staff-facing ticket notifications.',
+        ],
+    ],
+    [
+        'version' => '4.5.19',
+        'date' => '2026-07-09',
+        'changes' => [
+            'Fix: saving a notification template with no platform selected crashed with an uncaught error instead of a normal validation message.',
+        ],
+    ],
+    [
+        'version' => '4.5.18',
+        'date' => '2026-07-09',
+        'changes' => [
+            'New: "NewProductActivation" notification - fires instantly on service activation (AfterModuleCreate). Parameters: Client First/Last/Full Name, Message Signature, WHMCS Domain, Product Name, Product Domain, Service ID.',
+        ],
+    ],
+    [
+        'version' => '4.5.17',
+        'date' => '2026-07-09',
+        'changes' => [
+            'Fix: the "Sent Message" popover on Notification Reports could overflow/overlap the page for long messages (notably Botms.in/Baileys). Now wraps, capped at 500 characters, positioned above the row.',
+        ],
+    ],
+    [
+        'version' => '4.5.16',
+        'date' => '2026-07-09',
+        'changes' => [
+            'Fix: Botms.in webhook handler now correctly parses the real payload shape (Baileys-style messages.upsert events), skipping system/session events and extracting real incoming message previews.',
+        ],
+    ],
+    [
+        'version' => '4.5.15',
+        'date' => '2026-07-09',
+        'changes' => [
+            'Fix: sending via Botms.in failed with a TypeError when the WhatsApp Custom Field setting was left unselected.',
+        ],
+    ],
+    [
+        'version' => '4.5.14',
+        'date' => '2026-07-09',
+        'changes' => [
+            'New: added Botms.in as a WhatsApp platform (Settings → Platforms → Botms.in) - Instance ID + Access Token, selectable for any notification template.',
+            'New: webhook auto-registers with botms.in on save, feeding incoming messages into the WhatsApp Conversations chat view.',
+        ],
+    ],
+    [
+        'version' => '4.5.13',
+        'date' => '2026-07-09',
+        'changes' => [
+            'New: "Sent Message" preview column on Notification Reports, showing what was actually sent to the client.',
+            'New: Delete button on each report row (log entry only, does not unsend the message).',
+            'Changed: Resend is now available on every report row, not just failed/errored ones.',
+        ],
+    ],
+    [
+        'version' => '4.5.12',
+        'date' => '2026-07-09',
+        'changes' => [
+            'Fix: ISHostInvoiceCreated now falls back to "#<invoice id>" for the invoice number when WHMCS hasn\'t assigned the formatted number yet (still Draft), instead of being blocked by the empty-parameter guard.',
+        ],
+    ],
+    [
+        'version' => '4.5.11',
+        'date' => '2026-07-09',
+        'changes' => [
+            'Fix: ISHostInvoiceCreated now sends at invoice creation time regardless of Draft status - on WHMCS 9.0.6, publishing a Draft invoice later doesn\'t reliably re-fire a hook this module can catch, so the previous Draft-skip left admin-created invoices unsent.',
+        ],
+    ],
+    [
+        'version' => '4.5.10',
+        'date' => '2026-07-09',
+        'changes' => [
+            'Fix: ISHostInvoiceCreated now also fires for invoices created directly by an admin (via the separate InvoiceCreationAdminArea hook), not just client-ordered/auto-generated invoices.',
+            'New: skips invoices still saved as Draft, and guards against a duplicate send when an invoice is published immediately on creation.',
+        ],
+    ],
+    [
+        'version' => '4.5.9',
+        'date' => '2026-07-09',
+        'changes' => [
+            'Fix: PaymentConfirmation now fires instantly on WHMCS\'s InvoicePaid hook instead of a once-daily cron scan.',
+            'New: ISHostInvoiceCreated now fires instantly on WHMCS\'s InvoiceCreated hook instead of a once-daily cron scan.',
+        ],
+    ],
+    [
+        'version' => '4.5.8',
+        'date' => '2026-07-09',
+        'changes' => [
+            'New: Billable and WA Category columns + filter on the Notification Reports page.',
+            'New: Billable/Free/Paid delivered message stat cards on Message Analytics.',
+            'New: Approximate Total Charges estimate on Message Analytics, based on rates you configure in Settings.',
+            'New: added Meta\'s "Authentication (International)" category everywhere categories are shown/filtered.',
+        ],
+    ],
+    [
+        'version' => '4.5.7',
+        'date' => '2026-07-08',
+        'changes' => [
+            'New: "WhatsApp Conversations" is now a live chat interface with a contact list, full message thread, and auto-refresh.',
+            'New: reply directly from the chat view with a free-form text message (within Meta\'s 24h customer service window).',
+            'New: full message history (both directions) is now stored, not just aggregate counts.',
+        ],
+    ],
+    [
+        'version' => '4.5.6',
+        'date' => '2026-07-08',
+        'changes' => [
+            'Fix: sending now fails with a clear, specific error when a template merge field is blank, instead of Meta\'s opaque #131008 error.',
+            'Fix: template-building errors were never checked before calling the API, silently sending malformed requests.',
+            'New: incoming customer replies now show their actual message text on the WhatsApp Conversations page.',
+        ],
+    ],
+    [
+        'version' => '4.5.5',
+        'date' => '2026-07-07',
+        'changes' => [
+            'New: inbound customer replies now update the WhatsApp Conversations page (message count and last-seen time), even before Meta reports the conversation id.',
+        ],
+    ],
+    [
+        'version' => '4.5.4',
+        'date' => '2026-07-07',
+        'changes' => [
+            'Fix: webhook callback URL could render without a domain on some installs; now built from tblconfiguration.SystemURL.',
+        ],
+    ],
+    [
+        'version' => '4.5.3',
+        'date' => '2026-07-07',
+        'changes' => [
+            'Fix: delivery status / conversation webhook events could silently fail to save if the DB migration had not been triggered yet by WHMCS. The schema now self-heals automatically on every request.',
+        ],
+    ],
+    [
+        'version' => '4.5.2',
+        'date' => '2026-07-07',
+        'changes' => [
+            'Fix: the WhatsApp webhook callback URL shown in settings was broken (built from the admin page path); it is now built from the WHMCS system domain.',
+            'Fix: webhook verify token comparison now trims whitespace to avoid false verification failures.',
+        ],
+    ],
+    [
+        'version' => '4.5.1',
+        'date' => '2026-07-07',
+        'changes' => [
+            'New: WhatsApp Conversations page (per-conversation client, phone, category, message count, expiration).',
+            'New: Billable/Free/Unknown tracking per conversation, based on Meta\'s pricing.billable field.',
+            'New: Conversations are linked back to the WHMCS client and phone number when resolvable.',
+        ],
+    ],
+    [
+        'version' => '4.5.0',
+        'date' => '2026-07-07',
+        'changes' => [
+            'New: WhatsApp delivery status tracking (sent/delivered/read/failed) via Meta status webhook.',
+            'New: WhatsApp conversation analytics dashboard (billable conversations by category).',
+            'New: Resend action for failed/errored notifications on the Reports page.',
+            'New: Search reports by client, invoice, domain, status, delivery status, platform and date.',
+        ],
+    ],
+    [
         'version' => '3.9.0',
         'date' => '2025-03-28',
         'changes' => [

@@ -519,4 +519,342 @@ final class DatabaseUpgrade
             lkn_hn_log('Database 4.3.0 upgrade failed', null, $th->__toString());
         }
     }
+
+    /**
+     * Adds WhatsApp delivery status tracking (sent/delivered/read/failed),
+     * resend support and conversation analytics.
+     */
+    public static function v450(): void
+    {
+        try {
+            $columns = Capsule::schema()->getColumnListing('mod_lkn_hook_notification_reports');
+
+            if (!in_array('wa_message_id', $columns, true)) {
+                Capsule::connection()->statement('
+                    ALTER TABLE mod_lkn_hook_notification_reports
+                    ADD COLUMN wa_message_id VARCHAR(255) NULL AFTER target
+                ');
+            }
+
+            if (!in_array('delivery_status', $columns, true)) {
+                Capsule::connection()->statement('
+                    ALTER TABLE mod_lkn_hook_notification_reports
+                    ADD COLUMN delivery_status VARCHAR(50) NULL AFTER wa_message_id
+                ');
+            }
+
+            if (!in_array('delivery_updated_at', $columns, true)) {
+                Capsule::connection()->statement('
+                    ALTER TABLE mod_lkn_hook_notification_reports
+                    ADD COLUMN delivery_updated_at DATETIME NULL AFTER delivery_status
+                ');
+            }
+
+            if (!in_array('whmcs_hook_params', $columns, true)) {
+                Capsule::connection()->statement('
+                    ALTER TABLE mod_lkn_hook_notification_reports
+                    ADD COLUMN whmcs_hook_params LONGTEXT NULL AFTER msg
+                ');
+            }
+
+            if (!in_array('resent_from_report_id', $columns, true)) {
+                Capsule::connection()->statement('
+                    ALTER TABLE mod_lkn_hook_notification_reports
+                    ADD COLUMN resent_from_report_id INT NULL AFTER queue_id
+                ');
+            }
+
+            if (!Capsule::schema()->hasTable('mod_lkn_hook_notification_reports_idx_wa')) {
+                // Indexes cannot use IF NOT EXISTS on older MySQL, so guard with information_schema.
+                $hasIndex = Capsule::connection()->select("
+                    SELECT COUNT(1) as total FROM information_schema.STATISTICS
+                    WHERE TABLE_SCHEMA = DATABASE()
+                    AND TABLE_NAME = 'mod_lkn_hook_notification_reports'
+                    AND INDEX_NAME = 'idx_wa_message_id'
+                ");
+
+                if (($hasIndex[0]->total ?? 0) == 0) {
+                    Capsule::connection()->statement('
+                        ALTER TABLE mod_lkn_hook_notification_reports
+                        ADD INDEX idx_wa_message_id (wa_message_id),
+                        ADD INDEX idx_client_id (client_id),
+                        ADD INDEX idx_category (category, category_id)
+                    ');
+                }
+            }
+
+            Capsule::connection()->statement('
+                CREATE TABLE IF NOT EXISTS mod_lkn_hook_notification_conversations (
+                    id INT NOT NULL AUTO_INCREMENT,
+                    conversation_id VARCHAR(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+                    category VARCHAR(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+                    pricing_model VARCHAR(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+                    origin_type VARCHAR(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+                    message_count INT NOT NULL DEFAULT 1,
+                    first_message_at DATETIME DEFAULT NULL,
+                    last_message_at DATETIME DEFAULT NULL,
+                    expiration_at DATETIME DEFAULT NULL,
+                    PRIMARY KEY (id),
+                    UNIQUE KEY uniq_conversation_id (conversation_id)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+            ');
+
+            lkn_hn_log('Database 4.5.0 success', null, []);
+        } catch (Throwable $th) {
+            lkn_hn_log('Database 4.5.0 upgrade failed', null, $th->__toString());
+        }
+    }
+
+    /**
+     * Adds the billable flag and client/phone linkage to the conversation
+     * analytics table, so conversations can be searched/filtered by client
+     * and their billing status shown (billable vs free-tier/unknown).
+     */
+    public static function v451(): void
+    {
+        try {
+            $columns = Capsule::schema()->getColumnListing('mod_lkn_hook_notification_conversations');
+
+            if (!in_array('billable', $columns, true)) {
+                Capsule::connection()->statement('
+                    ALTER TABLE mod_lkn_hook_notification_conversations
+                    ADD COLUMN billable TINYINT(1) NULL AFTER pricing_model
+                ');
+            }
+
+            if (!in_array('client_id', $columns, true)) {
+                Capsule::connection()->statement('
+                    ALTER TABLE mod_lkn_hook_notification_conversations
+                    ADD COLUMN client_id INT NULL AFTER conversation_id
+                ');
+            }
+
+            if (!in_array('phone_number', $columns, true)) {
+                Capsule::connection()->statement('
+                    ALTER TABLE mod_lkn_hook_notification_conversations
+                    ADD COLUMN phone_number VARCHAR(255) NULL AFTER client_id
+                ');
+            }
+
+            $hasIndex = Capsule::connection()->select("
+                SELECT COUNT(1) as total FROM information_schema.STATISTICS
+                WHERE TABLE_SCHEMA = DATABASE()
+                AND TABLE_NAME = 'mod_lkn_hook_notification_conversations'
+                AND INDEX_NAME = 'idx_client_id'
+            ");
+
+            if (($hasIndex[0]->total ?? 0) == 0) {
+                Capsule::connection()->statement('
+                    ALTER TABLE mod_lkn_hook_notification_conversations
+                    ADD INDEX idx_client_id (client_id),
+                    ADD INDEX idx_phone_number (phone_number)
+                ');
+            }
+
+            lkn_hn_log('Database 4.5.1 success', null, []);
+        } catch (Throwable $th) {
+            lkn_hn_log('Database 4.5.1 upgrade failed', null, $th->__toString());
+        }
+    }
+
+    /**
+     * Adds the last-message preview/direction to conversations, so an actual
+     * received message (not just a bumped counter) is visible on the
+     * WhatsApp Conversations page.
+     */
+    public static function v452(): void
+    {
+        try {
+            $columns = Capsule::schema()->getColumnListing('mod_lkn_hook_notification_conversations');
+
+            if (!in_array('last_message_preview', $columns, true)) {
+                Capsule::connection()->statement('
+                    ALTER TABLE mod_lkn_hook_notification_conversations
+                    ADD COLUMN last_message_preview VARCHAR(500) NULL AFTER last_message_at
+                ');
+            }
+
+            if (!in_array('last_message_direction', $columns, true)) {
+                Capsule::connection()->statement("
+                    ALTER TABLE mod_lkn_hook_notification_conversations
+                    ADD COLUMN last_message_direction VARCHAR(20) NULL AFTER last_message_preview
+                ");
+            }
+
+            lkn_hn_log('Database 4.5.6 success', null, []);
+        } catch (Throwable $th) {
+            lkn_hn_log('Database 4.5.6 upgrade failed', null, $th->__toString());
+        }
+    }
+
+    /**
+     * Adds a full message history table (both inbound and outbound), powering
+     * the live WhatsApp Conversations chat view.
+     */
+    public static function v453(): void
+    {
+        try {
+            Capsule::connection()->statement('
+                CREATE TABLE IF NOT EXISTS mod_lkn_hook_notification_messages (
+                    id INT NOT NULL AUTO_INCREMENT,
+                    client_id INT DEFAULT NULL,
+                    phone_number VARCHAR(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+                    wa_message_id VARCHAR(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+                    direction VARCHAR(20) COLLATE utf8mb4_unicode_ci NOT NULL,
+                    message_type VARCHAR(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+                    body TEXT COLLATE utf8mb4_unicode_ci,
+                    status VARCHAR(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+                    sent_at DATETIME NOT NULL,
+                    PRIMARY KEY (id),
+                    UNIQUE KEY uniq_wa_message_id (wa_message_id),
+                    KEY idx_phone_number (phone_number),
+                    KEY idx_client_id (client_id)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+            ');
+
+            lkn_hn_log('Database 4.5.7 success', null, []);
+        } catch (Throwable $th) {
+            lkn_hn_log('Database 4.5.7 upgrade failed', null, $th->__toString());
+        }
+    }
+
+    /**
+     * Adds message-level billable/conversation-category columns to the
+     * reports table (as opposed to the conversation-level ones already on
+     * mod_lkn_hook_notification_conversations), so the Reports page and
+     * Message Analytics can show/report on a per-message basis.
+     */
+    public static function v454(): void
+    {
+        try {
+            $columns = Capsule::schema()->getColumnListing('mod_lkn_hook_notification_reports');
+
+            if (!in_array('billable', $columns, true)) {
+                Capsule::connection()->statement('
+                    ALTER TABLE mod_lkn_hook_notification_reports
+                    ADD COLUMN billable TINYINT(1) NULL AFTER delivery_updated_at
+                ');
+            }
+
+            if (!in_array('wa_category', $columns, true)) {
+                Capsule::connection()->statement('
+                    ALTER TABLE mod_lkn_hook_notification_reports
+                    ADD COLUMN wa_category VARCHAR(50) NULL AFTER billable
+                ');
+            }
+
+            lkn_hn_log('Database 4.5.8 success', null, []);
+        } catch (Throwable $th) {
+            lkn_hn_log('Database 4.5.8 upgrade failed', null, $th->__toString());
+        }
+    }
+
+    /**
+     * Adds a message_preview column to the reports table, storing a
+     * human-readable snapshot of what was actually sent (resolved template
+     * parameter values), for the "what did this client receive" view on the
+     * Notification Reports page.
+     */
+    public static function v455(): void
+    {
+        try {
+            $columns = Capsule::schema()->getColumnListing('mod_lkn_hook_notification_reports');
+
+            if (!in_array('message_preview', $columns, true)) {
+                Capsule::connection()->statement('
+                    ALTER TABLE mod_lkn_hook_notification_reports
+                    ADD COLUMN message_preview TEXT NULL AFTER msg
+                ');
+            }
+
+            lkn_hn_log('Database 4.5.13 success', null, []);
+        } catch (Throwable $th) {
+            lkn_hn_log('Database 4.5.13 upgrade failed', null, $th->__toString());
+        }
+    }
+
+    /**
+     * Idempotent, cheap self-heal for the delivery-tracking/conversation-analytics
+     * schema (v450/v451).
+     *
+     * WHMCS only calls the module's `_upgrade()` hook when an admin loads the
+     * Setup > Addon Modules page (or the module's config page) *after* the code
+     * on disk was updated. If the files are updated in place without that page
+     * ever being visited, the new columns/table never get created even though
+     * the new code is already running — most visibly, the WhatsApp status
+     * webhook then silently fails to write delivery status / conversations
+     * (the error is caught and only shows up in the module log).
+     *
+     * This method is safe to call on every request: each check is a fast
+     * metadata lookup, and it is a no-op once the schema is up to date.
+     *
+     * @since 4.5.3
+     */
+    public static function ensureDeliveryTrackingSchema(): void
+    {
+        try {
+            if (!Capsule::schema()->hasTable('mod_lkn_hook_notification_reports')) {
+                // Module was never activated; nothing to heal here.
+                return;
+            }
+
+            $reportColumns = Capsule::schema()->getColumnListing('mod_lkn_hook_notification_reports');
+
+            $missingV450 = !in_array('delivery_status', $reportColumns, true)
+                || !in_array('wa_message_id', $reportColumns, true)
+                || !in_array('whmcs_hook_params', $reportColumns, true)
+                || !in_array('resent_from_report_id', $reportColumns, true)
+                || !Capsule::schema()->hasTable('mod_lkn_hook_notification_conversations');
+
+            if ($missingV450) {
+                lkn_hn_log('Delivery tracking schema self-heal: applying v450', [], []);
+                self::v450();
+            }
+
+            if (Capsule::schema()->hasTable('mod_lkn_hook_notification_conversations')) {
+                $conversationColumns = Capsule::schema()->getColumnListing('mod_lkn_hook_notification_conversations');
+
+                $missingV451 = !in_array('billable', $conversationColumns, true)
+                    || !in_array('client_id', $conversationColumns, true)
+                    || !in_array('phone_number', $conversationColumns, true);
+
+                if ($missingV451) {
+                    lkn_hn_log('Delivery tracking schema self-heal: applying v451', [], []);
+                    self::v451();
+                }
+
+                $missingV452 = !in_array('last_message_preview', $conversationColumns, true)
+                    || !in_array('last_message_direction', $conversationColumns, true);
+
+                if ($missingV452) {
+                    lkn_hn_log('Delivery tracking schema self-heal: applying v452', [], []);
+                    self::v452();
+                }
+            }
+
+            if (!Capsule::schema()->hasTable('mod_lkn_hook_notification_messages')) {
+                lkn_hn_log('Delivery tracking schema self-heal: applying v453', [], []);
+                self::v453();
+            }
+
+            $reportColumns = $reportColumns ?? Capsule::schema()->getColumnListing('mod_lkn_hook_notification_reports');
+
+            $missingV454 = !in_array('billable', $reportColumns, true)
+                || !in_array('wa_category', $reportColumns, true);
+
+            if ($missingV454) {
+                lkn_hn_log('Delivery tracking schema self-heal: applying v454', [], []);
+                self::v454();
+            }
+
+            $missingV455 = !in_array('message_preview', $reportColumns, true);
+
+            if ($missingV455) {
+                lkn_hn_log('Delivery tracking schema self-heal: applying v455', [], []);
+                self::v455();
+            }
+        } catch (Throwable $th) {
+            lkn_hn_log('Delivery tracking schema self-heal failed', [], ['exception' => $th->__toString()]);
+        }
+    }
 }

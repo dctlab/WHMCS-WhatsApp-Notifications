@@ -4,6 +4,8 @@ namespace Lkn\HookNotification\Core\Platforms\Common\Infrastructure;
 
 use Lkn\HookNotification\Core\Platforms\Baileys\BaileysApiClient;
 use Lkn\HookNotification\Core\Platforms\Baileys\Domain\BaileysSettings;
+use Lkn\HookNotification\Core\Platforms\Botms\Domain\BotmsSettings;
+use Lkn\HookNotification\Core\Platforms\Botms\Infrastructure\BotmsApiClient;
 use Lkn\HookNotification\Core\Platforms\Chatwoot\Domain\ChatwootSettings;
 use Lkn\HookNotification\Core\Platforms\Chatwoot\Infrastructure\ChatwootApiClient;
 use Lkn\HookNotification\Core\Platforms\EvolutionApi\Domain\EvolutionApiSettings;
@@ -16,6 +18,11 @@ final class PlatformApiClientFactory
     public function makeBaileysClient(BaileysSettings $settings): BaileysApiClient
     {
         return new BaileysApiClient($settings->endpoint, $settings->apiToken);
+    }
+
+    public function makeBotmsClient(BotmsSettings $settings): BotmsApiClient
+    {
+        return new BotmsApiClient($settings->instanceId, $settings->accessToken);
     }
 
     public function makeEvolutionApiClient(EvolutionApiSettings $settings): EvolutionApiClient

@@ -6,7 +6,7 @@
 
 <style>
     #lkn-hn-layout {
-        max-width: 1280px;
+        max-width: 1880px;
         margin: 0 auto 0;
     }
 

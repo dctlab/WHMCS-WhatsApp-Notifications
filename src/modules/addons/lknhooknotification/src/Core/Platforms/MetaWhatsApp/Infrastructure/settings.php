@@ -88,4 +88,65 @@ return [
         'type' => 'select',
         'options' => 'lkn_hn_locales',
     ],
+    [
+        'setting' => Settings::WP_WEBHOOK_VERIFY_TOKEN,
+        'label' => lkn_hn_lang('Webhook Verify Token'),
+        'description' => lkn_hn_lang('Any string you choose. Set the same value as the "Verify Token" when configuring the WhatsApp webhook in the Meta App Dashboard. This webhook is what allows the module to track delivered/read/failed status and conversation analytics. Webhook callback URL: [1]', [
+            lkn_hn_get_whatsapp_webhook_url(),
+        ]),
+        'type' => 'text',
+    ],
+    [
+        'separator' => true,
+        'title' => lkn_hn_lang('WhatsApp Two-Factor Authentication (login codes)'),
+        'description' => lkn_hn_lang('Used only by the separate "WhatsApp Verification" 2FA module (modules/security/lknwa2fa), to send login codes via Meta. Meta requires an approved "Authentication" category template for this - it cannot send an unsolicited code as free text. Create one in Meta Business Manager (WhatsApp Manager > Message Templates > Create Template > Authentication), get it approved, then enter its exact name below.'),
+    ],
+    [
+        'setting' => Settings::WP_2FA_TEMPLATE_NAME,
+        'label' => lkn_hn_lang('2FA Authentication Template Name'),
+        'description' => lkn_hn_lang('Exact name of your approved Meta Authentication template. Leave blank to disable Meta as a 2FA delivery option (Botms.in/Baileys will still work independently of this setting).'),
+        'type' => 'text',
+    ],
+    [
+        'setting' => Settings::WP_2FA_TEMPLATE_HAS_BUTTON,
+        'label' => lkn_hn_lang('Template includes a "Copy Code" button'),
+        'description' => lkn_hn_lang('Enable only if your approved template has a Copy Code / one-tap autofill button component. Most basic Authentication templates don\'t - leave this off unless you specifically added one.'),
+        'type' => 'checkbox',
+    ],
+    [
+        'setting' => Settings::WP_CHARGE_CURRENCY,
+        'label' => lkn_hn_lang('Currency symbol/code for charge estimates'),
+        'description' => lkn_hn_lang('E.g. "$", "USD", "R$". Used only to label the approximate charges shown on the Message Analytics page.'),
+        'type' => 'text',
+    ],
+    [
+        'setting' => Settings::WP_RATE_MARKETING,
+        'label' => lkn_hn_lang('Approximate rate per Marketing conversation'),
+        'description' => lkn_hn_lang('Your approximate Meta conversation-based rate for the "marketing" category, in the currency above. Meta\'s actual rates vary by country and change periodically; check the current rate card in your Meta Business Manager and update this periodically. Leave blank to exclude this category from the charge estimate.'),
+        'type' => 'text',
+    ],
+    [
+        'setting' => Settings::WP_RATE_UTILITY,
+        'label' => lkn_hn_lang('Approximate rate per Utility conversation'),
+        'description' => lkn_hn_lang('Same as above, for the "utility" category.'),
+        'type' => 'text',
+    ],
+    [
+        'setting' => Settings::WP_RATE_AUTHENTICATION,
+        'label' => lkn_hn_lang('Approximate rate per Authentication conversation'),
+        'description' => lkn_hn_lang('Same as above, for the "authentication" category.'),
+        'type' => 'text',
+    ],
+    [
+        'setting' => Settings::WP_RATE_AUTHENTICATION_INTL,
+        'label' => lkn_hn_lang('Approximate rate per Authentication (International) conversation'),
+        'description' => lkn_hn_lang('Same as above, for the "authentication_international" category (a higher-priced variant Meta uses for some international routes).'),
+        'type' => 'text',
+    ],
+    [
+        'setting' => Settings::WP_RATE_SERVICE,
+        'label' => lkn_hn_lang('Approximate rate per Service conversation'),
+        'description' => lkn_hn_lang('Same as above, for the "service" category (customer-initiated support conversations). Often free/zero-rated by Meta - check your rate card.'),
+        'type' => 'text',
+    ],
 ];

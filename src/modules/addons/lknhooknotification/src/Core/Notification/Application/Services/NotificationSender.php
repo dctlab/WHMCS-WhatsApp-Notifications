@@ -60,6 +60,13 @@ final class NotificationSender extends Singleton {
                 return null;
             }
 
+            $whmcsHookParams = $notification->transformHookParams($whmcsHookParams ?? []);
+
+            if ($whmcsHookParams === null) {
+                // The notification decided not to run for this event (e.g. dedup guard).
+                return null;
+            }
+
             return $this->send($notification, $whmcsHookParams);
         } catch (Throwable $th) {
             lkn_hn_log(
@@ -128,7 +135,9 @@ final class NotificationSender extends Singleton {
                 $platformResolverResult->code,
                 null,
                 $notification->code,
-                $notification->hook
+                $notification->hook,
+                queueId: $queueId,
+                whmcsHookParams: $this->sanitizeHookParams($whmcsHookParams),
             );
 
             return $platformResolverResult;
@@ -161,8 +170,40 @@ final class NotificationSender extends Singleton {
             $notification->hook,
             target: $platformResponse->target,
             queueId: $queueId,
+            waMessageId: $platformResponse->messageId,
+            whmcsHookParams: $this->sanitizeHookParams($whmcsHookParams),
+            messagePreview: $platformResponse->messagePreview,
         );
 
         return $platformResponse;
+    }
+
+    /**
+     * Hook params can carry non-scalar values (WHMCS models/objects) depending on the
+     * hook. We only keep this around to allow the "resend" feature to rebuild the same
+     * notification later, so we make a best-effort JSON-safe copy and silently drop it
+     * if it cannot be represented, rather than breaking the actual send.
+     *
+     * @param  array<mixed>|null $whmcsHookParams
+     *
+     * @return array<mixed>|null
+     */
+    private function sanitizeHookParams(?array $whmcsHookParams): ?array
+    {
+        if ($whmcsHookParams === null) {
+            return null;
+        }
+
+        try {
+            $encoded = json_encode($whmcsHookParams);
+
+            if ($encoded === false) {
+                return null;
+            }
+
+            return json_decode($encoded, true);
+        } catch (Throwable $th) {
+            return null;
+        }
     }
 }

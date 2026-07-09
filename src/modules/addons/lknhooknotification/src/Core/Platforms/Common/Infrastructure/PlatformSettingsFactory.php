@@ -3,6 +3,7 @@
 namespace Lkn\HookNotification\Core\Platforms\Common\Infrastructure;
 
 use Lkn\HookNotification\Core\Platforms\Baileys\Domain\BaileysSettings;
+use Lkn\HookNotification\Core\Platforms\Botms\Domain\BotmsSettings;
 use Lkn\HookNotification\Core\Platforms\Chatwoot\Domain\ChatwootSettings;
 use Lkn\HookNotification\Core\Platforms\Chatwoot\Domain\LiveChatSettings;
 use Lkn\HookNotification\Core\Platforms\EvolutionApi\Domain\EvolutionApiSettings;
@@ -19,6 +20,16 @@ final class PlatformSettingsFactory
             lkn_hn_config(Settings::BAILEYS_API_KEY),
             lkn_hn_config(Settings::BAILEYS_WP_CUSTOM_FIELD_ID),
             lkn_hn_config(Settings::BAILEYS_ENDPOINT_URL),
+        );
+    }
+
+    public static function makeBotmsSettings(array $raw): BotmsSettings
+    {
+        return new BotmsSettings(
+            lkn_hn_config(Settings::BOTMS_ENABLE),
+            lkn_hn_config(Settings::BOTMS_INSTANCE_ID),
+            lkn_hn_config(Settings::BOTMS_ACCESS_TOKEN),
+            lkn_hn_config(Settings::BOTMS_WP_CUSTOM_FIELD_ID),
         );
     }
 
@@ -45,6 +56,7 @@ final class PlatformSettingsFactory
             lkn_hn_config(Settings::WP_SHOW_INVOICE_REMINDER_BTN_WHEN_PAID),
             lkn_hn_config(Settings::WP_USE_TICKET_WHATSAPP_CF_WHEN_SET),
             lkn_hn_config(Settings::WP_MSG_TEMPLATE_LANG),
+            lkn_hn_config(Settings::WP_WEBHOOK_VERIFY_TOKEN),
         );
     }
 

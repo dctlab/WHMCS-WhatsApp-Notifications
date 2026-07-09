@@ -5,6 +5,7 @@ use Lkn\HookNotification\Core\AdminUI\Http\Controllers\LogsController;
 use Lkn\HookNotification\Core\AdminUI\Http\Controllers\SettingsController;
 use Lkn\HookNotification\Core\BulkMessaging\Http\Controllers\BulkController;
 use Lkn\HookNotification\Core\NotificationReport\Http\Controllers\NotificationReportController;
+use Lkn\HookNotification\Core\NotificationReport\Http\Controllers\WhatsAppChatController;
 use Lkn\HookNotification\Core\Notification\Http\Controllers\NotificationController;
 
 return [
@@ -54,6 +55,24 @@ return [
         'class' => [
             NotificationReportController::class,
             'viewReports',
+        ],
+    ],
+    'notification-analytics' => [
+        'class' => [
+            NotificationReportController::class,
+            'viewAnalytics',
+        ],
+    ],
+    'notification-conversations' => [
+        'class' => [
+            NotificationReportController::class,
+            'viewConversations',
+        ],
+    ],
+    'notification-chat' => [
+        'class' => [
+            WhatsAppChatController::class,
+            'viewChat',
         ],
     ],
     'notifications/{notif_code}/templates/{tpl_lang}' => [

@@ -2,6 +2,9 @@
 
 namespace Lkn\HookNotification\Core\WHMCS;
 
+use Lkn\HookNotification\Core\NotificationReport\Http\Controllers\WhatsAppChatApiController;
+use Lkn\HookNotification\Core\Platforms\Botms\Http\Controllers\BotmsWebhookController;
+use Lkn\HookNotification\Core\Platforms\MetaWhatsApp\Http\Controllers\MetaWebhookController;
 use Lkn\HookNotification\Core\Shared\Infrastructure\Singleton;
 
 final class ApiHandler extends Singleton {
@@ -16,6 +19,22 @@ final class ApiHandler extends Singleton {
             'password/reset' => [
                 PasswordResetService::class,
                 'run',
+            ],
+            'whatsapp/webhook' => [
+                MetaWebhookController::class,
+                'handle',
+            ],
+            'botms/webhook' => [
+                BotmsWebhookController::class,
+                'handle',
+            ],
+            'chat/poll' => [
+                WhatsAppChatApiController::class,
+                'poll',
+            ],
+            'chat/send' => [
+                WhatsAppChatApiController::class,
+                'send',
             ],
         ];
     }
@@ -35,9 +54,17 @@ final class ApiHandler extends Singleton {
             [$class, $method] = $this->endpoints[$match['matchedEndpoint']];
             $params           = $match['endpointParams'];
 
-            $params = array_merge($match['endpointParams'], $queryParams);
+            $params = array_merge($match['endpointParams'], $queryParams, $_GET);
 
             $classOutput = $this->invoke($class, $method, $params);
+
+            if (is_array($classOutput) && array_key_exists('__raw', $classOutput)) {
+                http_response_code($classOutput['__status'] ?? 200);
+                Header('Content-Type: text/plain');
+                echo (string) $classOutput['__raw'];
+
+                return;
+            }
 
             echo json_encode($classOutput, JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
 

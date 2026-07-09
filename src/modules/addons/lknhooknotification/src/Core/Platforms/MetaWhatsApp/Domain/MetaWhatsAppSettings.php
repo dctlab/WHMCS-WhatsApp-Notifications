@@ -16,6 +16,7 @@ class MetaWhatsAppSettings extends AbstractPlatformSettings
         public ?bool $showInvoiceReminderBtn,
         public ?int $wpCustomFieldIdForTicket,
         public ?string $defaultMsgTemplateLang,
+        public ?string $webhookVerifyToken = null,
     ) {
     }
 }
