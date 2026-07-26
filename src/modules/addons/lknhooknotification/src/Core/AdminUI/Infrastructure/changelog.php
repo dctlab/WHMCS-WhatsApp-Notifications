@@ -2,6 +2,15 @@
 
 return [
     [
+        'version' => '4.5.34',
+        'date' => '2026-07-10',
+        'changes' => [
+            'New: 2FA Logs menu (User Logs / Admin Logs) showing the WhatsApp 2FA audit trail.',
+            'New: TwoFactorAuthentication notification - the client-facing 2FA message is now a customizable template.',
+            'New (2FA module): Code Valid minutes and Code Length are now configurable in the module\'s own settings screen.',
+        ],
+    ],
+    [
         'version' => '4.5.33',
         'date' => '2026-07-10',
         'changes' => [

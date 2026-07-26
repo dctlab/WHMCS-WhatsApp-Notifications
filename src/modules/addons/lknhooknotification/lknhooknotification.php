@@ -23,7 +23,7 @@ function lknhooknotification_config()
         $language = 'english';
     }
 
-    $version = '4.5.33'; // CHANGE MANUALLY ON RELEASE
+    $version = '4.5.34'; // CHANGE MANUALLY ON RELEASE
 
     return [
         'name' => lkn_hn_lang('WhatsApp and Chatwoot'),

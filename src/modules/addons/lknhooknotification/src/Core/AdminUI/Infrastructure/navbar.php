@@ -31,6 +31,22 @@ return [
             'icon' => 'fal fa-comments-alt',
         ],
         [
+            'label' => lkn_hn_lang('2FA Logs'),
+            'icon' => 'far fa-shield-check',
+            'items' => [
+                [
+                    'label' => lkn_hn_lang('User Logs'),
+                    'endpoint' => 'notification-2fa-user-logs',
+                    'icon' => 'fal fa-user',
+                ],
+                [
+                    'label' => lkn_hn_lang('Admin Logs'),
+                    'endpoint' => 'notification-2fa-admin-logs',
+                    'icon' => 'fal fa-user-shield',
+                ],
+            ],
+        ],
+        [
             'label' => lkn_hn_lang('Bulk Messages'),
             'icon' => 'far fa-mail-bulk',
             'endpoint' => 'bulk/list',
@@ -107,7 +123,7 @@ return [
                 ],
                 [
                     'icon' => 'glyphicon glyphicon-download',
-                    'label' => 'v4.5.33',
+                    'label' => 'v4.5.34',
                     'external' => true,
                     'url' => 'https://github.com/LinkNacional/whmcs-whatsapp-api-notifications-open-source/releases'
                 ]

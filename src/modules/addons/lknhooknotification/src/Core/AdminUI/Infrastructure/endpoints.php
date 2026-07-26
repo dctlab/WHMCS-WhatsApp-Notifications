@@ -5,6 +5,7 @@ use Lkn\HookNotification\Core\AdminUI\Http\Controllers\LogsController;
 use Lkn\HookNotification\Core\AdminUI\Http\Controllers\SettingsController;
 use Lkn\HookNotification\Core\BulkMessaging\Http\Controllers\BulkController;
 use Lkn\HookNotification\Core\NotificationReport\Http\Controllers\NotificationReportController;
+use Lkn\HookNotification\Core\NotificationReport\Http\Controllers\TwoFactorAuthLogsController;
 use Lkn\HookNotification\Core\NotificationReport\Http\Controllers\WhatsAppChatController;
 use Lkn\HookNotification\Core\Notification\Http\Controllers\NotificationController;
 
@@ -73,6 +74,18 @@ return [
         'class' => [
             WhatsAppChatController::class,
             'viewChat',
+        ],
+    ],
+    'notification-2fa-user-logs' => [
+        'class' => [
+            TwoFactorAuthLogsController::class,
+            'viewClientLogs',
+        ],
+    ],
+    'notification-2fa-admin-logs' => [
+        'class' => [
+            TwoFactorAuthLogsController::class,
+            'viewAdminLogs',
         ],
     ],
     'notifications/{notif_code}/templates/{tpl_lang}' => [

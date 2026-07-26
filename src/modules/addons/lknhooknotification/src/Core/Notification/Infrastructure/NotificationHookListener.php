@@ -4,6 +4,7 @@ namespace Lkn\HookNotification\Core\Notification\Infrastructure;
 
 use Lkn\HookNotification\Core\Notification\Application\NotificationFactory;
 use Lkn\HookNotification\Core\Notification\Application\Services\NotificationSender;
+use Lkn\HookNotification\Core\Notification\Domain\AbstractManualNotification;
 use Lkn\HookNotification\Core\Shared\Infrastructure\Hooks;
 use Throwable;
 
@@ -35,12 +36,13 @@ final class NotificationHookListener
         foreach ($notifications as $notification) {
             /** @var \Lkn\HookNotification\Core\Notification\Domain\AbstractNotification $notification */
 
-            $isManualNotification = in_array(
-                $notification->hook,
-                [
-                    Hooks::ADMIN_INVOICES_CONTROLS_OUTPUT,
-                ]
-            );
+            $isManualNotification = $notification instanceof AbstractManualNotification
+                || in_array(
+                    $notification->hook,
+                    [
+                        Hooks::ADMIN_INVOICES_CONTROLS_OUTPUT,
+                    ]
+                );
 
             if ($isManualNotification) {
                 continue;
