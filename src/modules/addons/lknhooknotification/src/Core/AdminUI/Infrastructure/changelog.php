@@ -2,6 +2,13 @@
 
 return [
     [
+        'version' => '4.5.35',
+        'date' => '2026-07-10',
+        'changes' => [
+            'Fix: editing the TwoFactorAuthentication notification didn\'t work - it had a null hook value, which the Notifications list template doesn\'t handle. Now uses a real (but non-firing) hook label instead.',
+        ],
+    ],
+    [
         'version' => '4.5.34',
         'date' => '2026-07-10',
         'changes' => [

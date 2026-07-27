@@ -7,7 +7,15 @@
  * code to a CLIENT, using whatever template you configure here like any
  * other notification. Triggered directly by the separate "WhatsApp
  * Verification" 2FA module (modules/security/lknwa2fa) at the moment a
- * client needs a code, via NotificationReportService::sendTwoFactorAuthCode().
+ * client needs a code, via NotificationSender::send() directly - not by
+ * WHMCS firing a hook.
+ *
+ * Uses Hooks::USER_LOGIN purely as a descriptive label (shown on the
+ * Notifications page) - it is never actually registered to fire, since
+ * AbstractManualNotification is excluded from hook auto-registration
+ * regardless of which hook value it carries (see NotificationHookListener).
+ * A real Hooks value is still required here (not null): the Notifications
+ * list template reads $notification->hook->value unconditionally.
  *
  * This only covers client logins. Admin logins keep using a simple,
  * non-customizable message sent directly - WHMCS admin users aren't WHMCS
@@ -22,6 +30,7 @@ use Lkn\HookNotification\Core\Notification\Domain\AbstractManualNotification;
 use Lkn\HookNotification\Core\Notification\Domain\NotificationParameter;
 use Lkn\HookNotification\Core\Notification\Domain\NotificationParameterCollection;
 use Lkn\HookNotification\Core\NotificationReport\Domain\NotificationReportCategory;
+use Lkn\HookNotification\Core\Shared\Infrastructure\Hooks;
 
 final class TwoFactorAuthenticationNotification extends AbstractManualNotification
 {
@@ -70,7 +79,7 @@ final class TwoFactorAuthenticationNotification extends AbstractManualNotificati
         parent::__construct(
             'TwoFactorAuthentication',
             NotificationReportCategory::SERVICE,
-            null,
+            Hooks::USER_LOGIN,
             new NotificationParameterCollection($parameters),
             fn () => $this->whmcsHookParams['client_id'],
             fn () => $this->whmcsHookParams['client_id'],
