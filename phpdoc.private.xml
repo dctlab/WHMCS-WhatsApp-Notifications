@@ -1,26 +1,33 @@
 <?xml version="1.0" encoding="UTF-8"?>
+
 <phpdocumentor
     configVersion="3"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xmlns="https://www.phpdoc.org"
+    xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/phpDocumentor/phpDocumentor/master/data/xsd/phpdoc.xsd"
 >
-    <title>WhatsApp and Chatwoot</title>
+
+    <title>DCTLAB WhatsApp and Chatwoot Notifications</title>
 
     <paths>
         <output>docs/private</output>
         <cache>docs/.cache</cache>
     </paths>
 
-    <template name="default" />
+    <template name="default"/>
 
     <version number="latest">
         <api format="php">
             <source dsn=".">
-                <path>src/modules/addons/lknhooknotification</path>
+                <path>src</path>
             </source>
 
             <ignore>
                 <path>**/vendor</path>
+                <path>**/node_modules</path>
+                <path>**/tests</path>
+                <path>**/stubs.php</path>
+                <path>**/stubs_generator.php</path>
             </ignore>
         </api>
     </version>
