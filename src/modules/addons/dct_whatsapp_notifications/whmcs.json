@@ -1,0 +1,33 @@
+{
+    "schema": "1.0",
+    "type": "whmcs-addons",
+    "name": "dct_whatsapp_notifications",
+    "license": "proprietary",
+    "category": "utilities",
+    "description": {
+        "name": "WhatsApp Notifications",
+        "tagline": "Send WhatsApp notifications to your customers when WHMCS hooks are executed.",
+        "long": "Send manual and automatic WhatsApp and Chatwoot messages from WHMCS using supported messaging APIs.",
+        "features": [
+            "Send WhatsApp message templates via the WhatsApp API",
+            "Send WhatsApp documents via the WhatsApp API",
+            "Send messages through Chatwoot",
+            "Manual and automatic notification delivery",
+            "WHMCS hook-based notifications"
+        ]
+    },
+    "logo": {
+        "filename": "logo.png"
+    },
+    "support": {
+        "homepage": "https://dctlab.directcybertech.com/",
+        "email": "support@directcybertech.com",
+        "support_url": "https://dctlab.directcybertech.com/"
+    },
+    "authors": [
+        {
+            "name": "DCTLAB",
+            "homepage": "https://dctlab.directcybertech.com/"
+        }
+    ]
+}

@@ -1,0 +1,693 @@
+/**
+ * DCTLAB WhatsApp - UI Foundation (Phase 1)
+ *
+ * Everything in this file is scoped under .dctlab-whatsapp, so it can never
+ * leak into the rest of WHMCS admin. This module renders inside WHMCS's own
+ * admin page chrome (confirmed: layout.tpl has no <html>/<head> of its own),
+ * sharing WHMCS's already-loaded Bootstrap 3.4, jQuery, and Font Awesome 5
+ * Pro - this file does not assume Bootstrap 5 utility classes anywhere,
+ * and does not load any external framework of its own.
+ *
+ * @since 5.2.0 (Phase 1 - UI Foundation)
+ */
+
+.dctlab-whatsapp {
+    /* ===== Design tokens ===== */
+
+    --dct-primary: #1a56db;
+    --dct-primary-hover: #1543ab;
+    --dct-primary-light: #eaf1fd;
+
+    --dct-whatsapp: #25d366;
+    --dct-whatsapp-dark: #128c7e;
+    --dct-whatsapp-light: #e7f9ee;
+
+    --dct-success: #12805c;
+    --dct-success-light: #e6f4ee;
+    --dct-warning: #b45309;
+    --dct-warning-light: #fdf3e2;
+    --dct-danger: #c81e3a;
+    --dct-danger-light: #fbe7ea;
+    --dct-info: #2563a8;
+    --dct-info-light: #e9f1fb;
+    --dct-neutral: #6b7280;
+    --dct-neutral-light: #f1f2f4;
+
+    --dct-bg: #f5f6f8;
+    --dct-surface: #ffffff;
+    --dct-surface-muted: #fafbfc;
+
+    --dct-border: #e2e5ea;
+    --dct-border-light: #edeef1;
+
+    --dct-text: #1f2430;
+    --dct-text-muted: #6b7280;
+
+    --dct-radius-sm: 6px;
+    --dct-radius-md: 8px;
+    --dct-radius-lg: 10px;
+
+    --dct-shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.06);
+    --dct-shadow-md: 0 2px 8px rgba(16, 24, 40, 0.08);
+
+    --dct-spacing-xs: 4px;
+    --dct-spacing-sm: 8px;
+    --dct-spacing-md: 16px;
+    --dct-spacing-lg: 24px;
+    --dct-spacing-xl: 32px;
+
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: var(--dct-text);
+}
+
+/* ===== Typography ===== */
+
+.dctlab-whatsapp .dct-page-title {
+    font-size: 22px;
+    font-weight: 600;
+    margin: 0;
+    letter-spacing: -0.01em;
+}
+
+.dctlab-whatsapp .dct-section-title {
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0 0 var(--dct-spacing-sm);
+}
+
+.dctlab-whatsapp .dct-card-title {
+    font-size: 14px;
+    font-weight: 600;
+    margin: 0;
+}
+
+.dctlab-whatsapp .dct-text-muted {
+    color: var(--dct-text-muted);
+}
+
+.dctlab-whatsapp .dct-text-small {
+    font-size: 12px;
+}
+
+/* ===== Page header ===== */
+
+.dctlab-whatsapp .dct-page-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--dct-spacing-md);
+    margin-bottom: var(--dct-spacing-lg);
+}
+
+.dctlab-whatsapp .dct-page-header-text {
+    flex: 1 1 auto;
+    min-width: 200px;
+}
+
+.dctlab-whatsapp .dct-page-header-description {
+    color: var(--dct-text-muted);
+    font-size: 13px;
+    margin-top: 2px;
+}
+
+.dctlab-whatsapp .dct-page-header-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--dct-spacing-sm);
+    flex-wrap: wrap;
+}
+
+.dctlab-whatsapp .dct-breadcrumb {
+    font-size: 12px;
+    color: var(--dct-text-muted);
+    margin-bottom: var(--dct-spacing-xs);
+}
+
+.dctlab-whatsapp .dct-breadcrumb a {
+    color: var(--dct-text-muted);
+}
+
+/* ===== Card ===== */
+
+.dctlab-whatsapp .dct-card {
+    background: var(--dct-surface);
+    border: 1px solid var(--dct-border);
+    border-radius: var(--dct-radius-md);
+    box-shadow: var(--dct-shadow-sm);
+    margin-bottom: var(--dct-spacing-md);
+}
+
+.dctlab-whatsapp .dct-card-header {
+    padding: var(--dct-spacing-md);
+    border-bottom: 1px solid var(--dct-border-light);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--dct-spacing-sm);
+}
+
+.dctlab-whatsapp .dct-card-body {
+    padding: var(--dct-spacing-md);
+}
+
+.dctlab-whatsapp .dct-card-footer {
+    padding: var(--dct-spacing-md);
+    border-top: 1px solid var(--dct-border-light);
+    background: var(--dct-surface-muted);
+    border-radius: 0 0 var(--dct-radius-md) var(--dct-radius-md);
+}
+
+/* ===== Stat card ===== */
+
+.dctlab-whatsapp .dct-stat-card {
+    background: var(--dct-surface);
+    border: 1px solid var(--dct-border);
+    border-radius: var(--dct-radius-md);
+    box-shadow: var(--dct-shadow-sm);
+    padding: var(--dct-spacing-md);
+    display: flex;
+    flex-direction: column;
+    gap: var(--dct-spacing-xs);
+}
+
+.dctlab-whatsapp .dct-stat-card-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.dctlab-whatsapp .dct-stat-card-label {
+    font-size: 12px;
+    color: var(--dct-text-muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+
+.dctlab-whatsapp .dct-stat-card-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--dct-radius-sm);
+    background: var(--dct-primary-light);
+    color: var(--dct-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+}
+
+.dctlab-whatsapp .dct-stat-card-value {
+    font-size: 26px;
+    font-weight: 700;
+    line-height: 1.1;
+}
+
+.dctlab-whatsapp .dct-stat-card-trend {
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.dctlab-whatsapp .dct-stat-card-trend.dct-trend-up {
+    color: var(--dct-success);
+}
+
+.dctlab-whatsapp .dct-stat-card-trend.dct-trend-down {
+    color: var(--dct-danger);
+}
+
+.dctlab-whatsapp .dct-stat-card-description {
+    font-size: 12px;
+    color: var(--dct-text-muted);
+}
+
+/* ===== Buttons =====
+   Additive: enhances existing WHMCS/Bootstrap 3 buttons rather than
+   replacing them - existing .btn/.btn-primary etc keep working unchanged
+   anywhere these classes are not explicitly added. */
+
+.dctlab-whatsapp .dct-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 7px 14px;
+    border-radius: var(--dct-radius-sm);
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
+    line-height: 1.4;
+}
+
+.dctlab-whatsapp .dct-button:focus {
+    outline: 2px solid var(--dct-primary-light);
+    outline-offset: 1px;
+}
+
+.dctlab-whatsapp .dct-button:disabled,
+.dctlab-whatsapp .dct-button.dct-button-disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.dctlab-whatsapp .dct-button-primary {
+    background: var(--dct-primary);
+    border-color: var(--dct-primary);
+    color: #fff;
+}
+
+.dctlab-whatsapp .dct-button-primary:hover:not(:disabled) {
+    background: var(--dct-primary-hover);
+    border-color: var(--dct-primary-hover);
+    color: #fff;
+}
+
+.dctlab-whatsapp .dct-button-secondary {
+    background: var(--dct-surface);
+    border-color: var(--dct-border);
+    color: var(--dct-text);
+}
+
+.dctlab-whatsapp .dct-button-secondary:hover:not(:disabled) {
+    background: var(--dct-surface-muted);
+    color: var(--dct-text);
+}
+
+.dctlab-whatsapp .dct-button-success {
+    background: var(--dct-success);
+    border-color: var(--dct-success);
+    color: #fff;
+}
+
+.dctlab-whatsapp .dct-button-warning {
+    background: var(--dct-warning);
+    border-color: var(--dct-warning);
+    color: #fff;
+}
+
+.dctlab-whatsapp .dct-button-danger {
+    background: var(--dct-danger);
+    border-color: var(--dct-danger);
+    color: #fff;
+}
+
+.dctlab-whatsapp .dct-button-ghost {
+    background: transparent;
+    border-color: transparent;
+    color: var(--dct-text-muted);
+}
+
+.dctlab-whatsapp .dct-button-ghost:hover:not(:disabled) {
+    background: var(--dct-surface-muted);
+    color: var(--dct-text);
+}
+
+.dctlab-whatsapp .dct-button-loading {
+    position: relative;
+    color: transparent !important;
+    pointer-events: none;
+}
+
+.dctlab-whatsapp .dct-button-loading::after {
+    content: "";
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    top: 50%;
+    left: 50%;
+    margin: -7px 0 0 -7px;
+    border: 2px solid rgba(255, 255, 255, 0.5);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: dct-spin 0.6s linear infinite;
+}
+
+.dctlab-whatsapp .dct-button-secondary.dct-button-loading::after,
+.dctlab-whatsapp .dct-button-ghost.dct-button-loading::after {
+    border-color: rgba(31, 36, 48, 0.25);
+    border-top-color: var(--dct-text);
+}
+
+@keyframes dct-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* ===== Status badge =====
+   Icon + text (not color alone) so status is never conveyed by color only. */
+
+.dctlab-whatsapp .dct-status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    padding: 3px 9px;
+    border-radius: 999px;
+    white-space: nowrap;
+}
+
+.dctlab-whatsapp .dct-status-badge::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    flex-shrink: 0;
+}
+
+.dctlab-whatsapp .dct-status-badge-success {
+    background: var(--dct-success-light);
+    color: var(--dct-success);
+}
+
+.dctlab-whatsapp .dct-status-badge-warning {
+    background: var(--dct-warning-light);
+    color: var(--dct-warning);
+}
+
+.dctlab-whatsapp .dct-status-badge-danger {
+    background: var(--dct-danger-light);
+    color: var(--dct-danger);
+}
+
+.dctlab-whatsapp .dct-status-badge-info {
+    background: var(--dct-info-light);
+    color: var(--dct-info);
+}
+
+.dctlab-whatsapp .dct-status-badge-neutral {
+    background: var(--dct-neutral-light);
+    color: var(--dct-neutral);
+}
+
+/* ===== Table =====
+   Additive: does not touch the global .table class anywhere. */
+
+.dctlab-whatsapp .dct-table-wrap {
+    background: var(--dct-surface);
+    border: 1px solid var(--dct-border);
+    border-radius: var(--dct-radius-md);
+    overflow: hidden;
+}
+
+.dctlab-whatsapp table.dct-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.dctlab-whatsapp table.dct-table th {
+    text-align: left;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    color: var(--dct-text-muted);
+    background: var(--dct-surface-muted);
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--dct-border);
+    white-space: nowrap;
+}
+
+.dctlab-whatsapp table.dct-table td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--dct-border-light);
+    vertical-align: middle;
+}
+
+.dctlab-whatsapp table.dct-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.dctlab-whatsapp table.dct-table tbody tr:hover {
+    background: var(--dct-surface-muted);
+}
+
+.dctlab-whatsapp table.dct-table.dct-table-compact th,
+.dctlab-whatsapp table.dct-table.dct-table-compact td {
+    padding: 6px 12px;
+}
+
+.dctlab-whatsapp .dct-table-actions {
+    display: flex;
+    gap: 6px;
+    justify-content: flex-end;
+}
+
+/* Responsive table strategy: horizontal scroll on small screens rather
+   than forcing the page itself to overflow. */
+.dctlab-whatsapp .dct-table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* ===== Toolbar ===== */
+
+.dctlab-whatsapp .dct-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: var(--dct-spacing-sm);
+    background: var(--dct-surface);
+    border: 1px solid var(--dct-border);
+    border-radius: var(--dct-radius-md);
+    padding: var(--dct-spacing-md);
+    margin-bottom: var(--dct-spacing-md);
+}
+
+.dctlab-whatsapp .dct-toolbar-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.dctlab-whatsapp .dct-toolbar-actions {
+    display: flex;
+    gap: var(--dct-spacing-sm);
+    margin-left: auto;
+    flex-wrap: wrap;
+}
+
+/* ===== Form ===== */
+
+.dctlab-whatsapp .dct-form-group {
+    margin-bottom: var(--dct-spacing-md);
+}
+
+.dctlab-whatsapp .dct-form-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    margin-bottom: 4px;
+    color: var(--dct-text);
+}
+
+.dctlab-whatsapp .dct-form-help {
+    font-size: 12px;
+    color: var(--dct-text-muted);
+    margin-top: 4px;
+}
+
+.dctlab-whatsapp .dct-form-error {
+    font-size: 12px;
+    color: var(--dct-danger);
+    margin-top: 4px;
+}
+
+.dctlab-whatsapp .dct-input,
+.dctlab-whatsapp .dct-select,
+.dctlab-whatsapp .dct-textarea {
+    width: 100%;
+    font-size: 13px;
+    padding: 7px 10px;
+    border: 1px solid var(--dct-border);
+    border-radius: var(--dct-radius-sm);
+    background: var(--dct-surface);
+    color: var(--dct-text);
+}
+
+.dctlab-whatsapp .dct-input:focus,
+.dctlab-whatsapp .dct-select:focus,
+.dctlab-whatsapp .dct-textarea:focus {
+    border-color: var(--dct-primary);
+    outline: 2px solid var(--dct-primary-light);
+    outline-offset: 0;
+}
+
+/* ===== Alert ===== */
+
+.dctlab-whatsapp .dct-alert {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--dct-spacing-sm);
+    padding: var(--dct-spacing-sm) var(--dct-spacing-md);
+    border-radius: var(--dct-radius-sm);
+    border: 1px solid transparent;
+    font-size: 13px;
+    margin-bottom: var(--dct-spacing-md);
+}
+
+.dctlab-whatsapp .dct-alert-success {
+    background: var(--dct-success-light);
+    border-color: rgba(18, 128, 92, 0.2);
+    color: var(--dct-success);
+}
+
+.dctlab-whatsapp .dct-alert-warning {
+    background: var(--dct-warning-light);
+    border-color: rgba(180, 83, 9, 0.2);
+    color: var(--dct-warning);
+}
+
+.dctlab-whatsapp .dct-alert-danger {
+    background: var(--dct-danger-light);
+    border-color: rgba(200, 30, 58, 0.2);
+    color: var(--dct-danger);
+}
+
+.dctlab-whatsapp .dct-alert-info {
+    background: var(--dct-info-light);
+    border-color: rgba(37, 99, 168, 0.2);
+    color: var(--dct-info);
+}
+
+/* ===== Empty state ===== */
+
+.dctlab-whatsapp .dct-empty-state {
+    text-align: center;
+    padding: var(--dct-spacing-xl) var(--dct-spacing-md);
+    color: var(--dct-text-muted);
+}
+
+.dctlab-whatsapp .dct-empty-state-icon {
+    font-size: 32px;
+    color: var(--dct-border);
+    margin-bottom: var(--dct-spacing-sm);
+}
+
+.dctlab-whatsapp .dct-empty-state-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--dct-text);
+    margin-bottom: 4px;
+}
+
+.dctlab-whatsapp .dct-empty-state-description {
+    font-size: 13px;
+    margin-bottom: var(--dct-spacing-md);
+}
+
+/* ===== Provider card =====
+   Reserved for the Settings redesign phase - defined now so later phases
+   have no CSS work left, only markup. */
+
+.dctlab-whatsapp .dct-provider-card {
+    background: var(--dct-surface);
+    border: 1px solid var(--dct-border);
+    border-radius: var(--dct-radius-md);
+    box-shadow: var(--dct-shadow-sm);
+    padding: var(--dct-spacing-md);
+    display: flex;
+    flex-direction: column;
+    gap: var(--dct-spacing-sm);
+}
+
+.dctlab-whatsapp .dct-provider-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.dctlab-whatsapp .dct-provider-card-name {
+    display: flex;
+    align-items: center;
+    gap: var(--dct-spacing-sm);
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.dctlab-whatsapp .dct-provider-card-description {
+    font-size: 12px;
+    color: var(--dct-text-muted);
+}
+
+.dctlab-whatsapp .dct-provider-card-summary {
+    font-size: 12px;
+    color: var(--dct-text-muted);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.dctlab-whatsapp .dct-provider-card-actions {
+    display: flex;
+    gap: var(--dct-spacing-sm);
+    margin-top: auto;
+    padding-top: var(--dct-spacing-sm);
+}
+
+/* ===== Secret field (masked credentials) =====
+   Reserved for later Settings phase. */
+
+.dctlab-whatsapp .dct-secret-field {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: monospace;
+    font-size: 13px;
+}
+
+/* ===== Navigation active-state enhancement =====
+   Additive to Bootstrap 3's own .active styling on .navbar-nav > li,
+   which already changes background/font-weight - this adds a visible
+   accent border so current-page indication isn't conveyed by background
+   color shift alone. */
+
+.dctlab-whatsapp .navbar-nav > li.active > a,
+.dctlab-whatsapp .navbar-nav > li.dropdown.active > a.dropdown-toggle {
+    box-shadow: inset 0 -3px 0 0 var(--dct-primary);
+}
+
+/* ===== Responsive foundation ===== */
+
+@media (max-width: 991px) {
+    .dctlab-whatsapp .dct-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .dctlab-whatsapp .dct-toolbar-actions {
+        margin-left: 0;
+    }
+
+    .dctlab-whatsapp .dct-page-header {
+        flex-direction: column;
+    }
+
+    .dctlab-whatsapp .dct-page-header-actions {
+        width: 100%;
+    }
+}
+
+@media (max-width: 767px) {
+    .dctlab-whatsapp .dct-card-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .dctlab-whatsapp .dct-stat-card-value {
+        font-size: 22px;
+    }
+
+    /* Cards stack on mobile (single column) - pages using dct-stat-card
+       inside a Bootstrap 3 .row/.col-* grid already stack correctly at
+       this width via Bootstrap's own grid; this just tightens spacing. */
+    .dctlab-whatsapp .dct-stat-card {
+        margin-bottom: var(--dct-spacing-sm);
+    }
+}

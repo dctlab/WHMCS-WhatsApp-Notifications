@@ -1,0 +1,32 @@
+{
+    "name": "dctlab/dct-whatsapp-notifications",
+    "type": "project",
+    "license": "proprietary",
+    "description": "DCTLAB WhatsApp Notifications for WHMCS",
+    "minimum-stability": "stable",
+    "prefer-stable": true,
+    "config": {
+        "optimize-autoloader": false,
+        "htaccess-protect": true,
+        "secure-http": true,
+        "vendor-dir": "./vendor",
+        "cache-dir": "./composer-cache",
+        "data-dir": "./composer-data",
+        "archive-dir": "./composer-archive",
+        "bin-dir": "./vendor/bin",
+        "platform-check": "php-only"
+    },
+    "autoload": {
+        "psr-4": {
+            "Dct\\HookNotification\\": "src"
+        }
+    },
+    "authors": [
+        {
+            "name": "DCTLAB"
+        }
+    ],
+    "require": {
+        "spatie/pdf-to-image": "^3.1"
+    }
+}
