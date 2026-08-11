@@ -92,6 +92,59 @@ Settings
 The actual navigation is based on the module's existing route table and
 backend capabilities. No fake or unsupported endpoints were introduced.
 
+# 🖥️ Admin UI Screenshots
+
+The following screenshots show the redesigned WHMCS administration
+interface delivered across the DCTLAB WhatsApp Notifications module.
+
+## Dashboard
+
+![DCTLAB WhatsApp Dashboard](docs/screenshots/dashboard.png)
+
+The dashboard provides date-range controls, message KPIs, provider
+configuration status, message activity, WhatsApp usage, and notification
+performance.
+
+## Message Analytics
+
+![DCTLAB WhatsApp Message Analytics](docs/screenshots/analytics.png)
+
+The Analytics page provides delivery/read/failure metrics, delivery
+performance, daily message activity, and notification performance.
+
+## Notification Reports
+
+![DCTLAB WhatsApp Notification Reports](docs/screenshots/reports.png)
+
+The Reports interface provides server-side filters, delivery status,
+billable status, platform information, notification details, pagination,
+and report actions.
+
+## WhatsApp Meta Settings
+
+![DCTLAB WhatsApp Meta Settings](docs/screenshots/settings-meta.png)
+
+Provider settings use the DCTLAB card-based form design. Password-type
+credentials are intentionally rendered empty while preserving the
+stored value when the administrator leaves the field blank.
+
+## WhatsApp Conversations
+
+![DCTLAB WhatsApp Conversations](docs/screenshots/conversations.png)
+
+The Conversations interface provides the existing live conversation
+list, message thread, message status, and send-message workflow with
+responsive presentation.
+
+## WhatsApp 2FA Client Logs
+
+![DCTLAB WhatsApp 2FA Client Logs](docs/screenshots/2fa-client-logs.png)
+
+The 2FA Logs interface provides User ID, event, and date-range filters
+with a structured audit-log table and event badges.
+
+---
+
 ## Dashboard
 
 The redesigned Dashboard uses the existing analytics infrastructure
@@ -756,20 +809,20 @@ Tools
 
 # Roadmap
 
-## Version 5.0
+## Version 6.0
 
 - Modern architecture
 - Queue engine
 - Reports
 - REST API
 
-## Version 5.1
+## Version 6.1
 
 - Twilio
 - UltraMsg
 - Broadcast messaging
 
-## Version 5.2
+## Version 6.2
 
 - Plugin Marketplace
 - AI Template Assistant
