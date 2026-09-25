@@ -2,6 +2,19 @@
 
 return [
     [
+        'version' => '5.14.0',
+        'date' => '2026-09-25',
+        'changes' => [
+            'New: WhatsApp Conversations redesigned as a WhatsApp Web style inbox (hand-written CSS scoped under .wa-app, no Tailwind/build step, no conflict with the WHMCS admin theme): chat list with avatars, previews, unread badges and All / Unread / Clients / Unknown filters; chat header with WHMCS client name, company, profile link and "last message" time; bubbles with tails, day separators (Today / Yesterday / weekday / date), in-chat search, scroll-to-latest button with new-message counter; light and dark themes and a full-screen mode (remembered per browser).',
+            'Near real-time: polls every 3 s while the page is visible (12 s in a background tab) and switches chats without reloading. Delivery ticks update live - one grey tick sent, two grey delivered, two blue read, red on failure - and a clock icon shows while sending (optimistic bubble).',
+            'Notifications for new messages: unread counts per chat (shared by the whole admin team), unread total in the browser tab title, a short sound, and optional desktop notifications (bell button) that open the chat when clicked.',
+            'Opening a chat marks it read and sends a WhatsApp read receipt for the latest customer message, so the customer sees blue ticks.',
+            'Composer: Enter to send, Shift+Enter for a new line, auto-growing input, drafts kept per chat, emoji picker, attach / paste / drag-and-drop with a preview bar, image lightbox with download, and voice notes with a live level meter - stop to listen before sending, or send straight away.',
+            'The 24-hour reply window is shown in the header (time left), with a warning bar when it is closed, since WhatsApp only delivers approved templates outside it. Type a phone number in the search box to start a new chat.',
+            'Database: additive column admin_read (default 1, so existing history is not flagged unread) plus index (phone_number, admin_read) on mod_dct_hook_notification_messages (v5140AddChatReadTracking, also applied by the per-request self-heal). The poll endpoint releases the PHP session lock early so media and send requests are not blocked behind it.',
+        ],
+    ],
+    [
         'version' => '5.13.0',
         'date' => '2026-09-25',
         'changes' => [

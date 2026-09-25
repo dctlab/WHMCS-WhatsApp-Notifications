@@ -23,7 +23,7 @@ function dct_whatsapp_notifications_config()
         $language = 'english';
     }
 
-    $version = '5.13.0'; // CHANGE MANUALLY ON RELEASE
+    $version = '5.14.0'; // CHANGE MANUALLY ON RELEASE
 
     return [
         'name' => lkn_hn_lang('WhatsApp and Chatwoot'),
@@ -158,6 +158,10 @@ function dct_whatsapp_notifications_upgrade($vars): void
 
     if (version_compare($currentlyInstalledVersion, '5.13.0', '<')) {
         DatabaseUpgrade::v5130AddChatMediaColumns();
+    }
+
+    if (version_compare($currentlyInstalledVersion, '5.14.0', '<')) {
+        DatabaseUpgrade::v5140AddChatReadTracking();
     }
 
     // ensureDeliveryTrackingSchema() (introduced in 4.5.3) also self-heals

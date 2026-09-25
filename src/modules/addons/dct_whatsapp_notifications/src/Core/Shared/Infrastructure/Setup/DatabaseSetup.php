@@ -121,6 +121,7 @@ final class DatabaseSetup
                     `media_filename` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
                     `media_path` varchar(500) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
                     `media_size` int unsigned DEFAULT NULL,
+                    `admin_read` tinyint(1) NOT NULL DEFAULT 1,
                     `sent_at` datetime NOT NULL,
                     PRIMARY KEY (`id`),
                     UNIQUE KEY `uniq_wa_message_id` (`wa_message_id`),

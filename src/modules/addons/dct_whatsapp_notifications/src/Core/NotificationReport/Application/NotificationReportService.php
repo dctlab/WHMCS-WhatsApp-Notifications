@@ -583,6 +583,7 @@ final class NotificationReportService
                 'phone_number' => $row->phone_number,
                 'client_id' => $row->client_id ?? null,
                 'client_name' => $row->client_name ?? null,
+                'unread_count' => (int) ($row->unread_count ?? 0),
                 'last_message_preview' => $row->last_message_preview ?? null,
                 'last_message_direction' => $row->last_message_direction ?? null,
                 'last_message_at' => !empty($row->last_message_at) ? new DateTime($row->last_message_at) : null,
@@ -779,5 +780,71 @@ final class NotificationReportService
         );
 
         return lkn_hn_result('success', data: ['wa_message_id' => $waMessageId]);
+    }
+
+    /**
+     * Marks a contact's thread as read by the admin team and sends a read
+     * receipt to WhatsApp for the newest unread message (blue ticks on the
+     * customer's phone). Best-effort: failures are only logged.
+     *
+     * @since 5.14.0
+     */
+    public function markChatThreadRead(string $phoneNumber): void
+    {
+        $waMessageId = $this->notificationReportRepository->markThreadReadByAdmin($phoneNumber);
+
+        if (!$waMessageId || str_starts_with($waMessageId, 'botms') || !str_starts_with($waMessageId, 'wamid.')) {
+            return;
+        }
+
+        try {
+            $settings = PlatformSettingsFactory::makeMetaWhatsAppSettings();
+
+            if (!$settings->enabled) {
+                return;
+            }
+
+            $client = (new PlatformApiClientFactory())->makeMetaWhatsAppClient($settings);
+
+            if ($client->areSettingsFilled()) {
+                $client->markMessageAsRead($waMessageId);
+            }
+        } catch (Throwable $th) {
+            lkn_hn_log('Chat: read receipt failed', ['wa_message_id' => $waMessageId], ['exception' => $th->__toString()]);
+        }
+    }
+
+    /**
+     * Header info for the chat view: WHMCS client, last inbound message and
+     * whether Meta's 24-hour free-form reply window is still open.
+     *
+     * @since 5.14.0
+     *
+     * @return array{phone: string, client: ?array, last_inbound_at: ?string, window_open: bool, window_expires_at: ?string}
+     */
+    public function getChatContactInfo(string $phoneNumber): array
+    {
+        $phone         = (string) lkn_hn_normalize_phone_digits($phoneNumber);
+        $clientId      = $this->notificationReportRepository->guessClientIdByPhone($phone);
+        $lastInboundAt = $this->notificationReportRepository->getLastInboundAt($phone);
+        $expiresAt     = $lastInboundAt ? (new DateTime($lastInboundAt))->modify('+24 hours') : null;
+
+        return [
+            'phone' => $phone,
+            'client' => $this->notificationReportRepository->getClientSummary($clientId),
+            'last_inbound_at' => $lastInboundAt,
+            'window_open' => $expiresAt !== null && $expiresAt > new DateTime(),
+            'window_expires_at' => $expiresAt?->format('Y-m-d H:i:s'),
+        ];
+    }
+
+    /**
+     * @since 5.14.0
+     *
+     * @return array<int, string>
+     */
+    public function getChatOutboundStatuses(string $phoneNumber): array
+    {
+        return $this->notificationReportRepository->getRecentOutboundStatuses($phoneNumber);
     }
 }

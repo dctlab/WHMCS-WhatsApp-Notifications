@@ -36,7 +36,25 @@ final class WhatsAppChatController extends BaseController
 
         $selectedPhone = $request['phone'] ?? ($conversations[0]['phone_number'] ?? null);
 
+        $selectedPhone = $selectedPhone ? lkn_hn_normalize_phone_digits((string) $selectedPhone) : null;
+
         $thread = $selectedPhone ? $this->notificationReportService->getChatThread($selectedPhone) : [];
+
+        $jsonFlags = JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE;
+
+        $conversationsJson = json_encode(array_map(static fn (array $c) => [
+            'phone_number' => $c['phone_number'],
+            'client_id' => $c['client_id'],
+            'client_name' => $c['client_name'],
+            'unread_count' => $c['unread_count'] ?? 0,
+            'last_message_preview' => $c['last_message_preview'],
+            'last_message_direction' => $c['last_message_direction'],
+            'last_message_at' => $c['last_message_at'] ? $c['last_message_at']->format('Y-m-d H:i:s') : null,
+        ], $conversations), $jsonFlags) ?: '[]';
+
+        $contactJson = $selectedPhone
+            ? (json_encode($this->notificationReportService->getChatContactInfo($selectedPhone), $jsonFlags) ?: 'null')
+            : 'null';
 
         // CSRF token for the chat send / send-media API calls (5.13.0).
         if (empty($_SESSION['dct_hn_chat_token'])) {
@@ -63,6 +81,10 @@ final class WhatsAppChatController extends BaseController
                 ], $thread),
                 JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE
             ) ?: '[]',
+            'conversations_json' => $conversationsJson,
+            'contact_json' => $contactJson,
+            'server_time' => (new \DateTime())->format('Y-m-d H:i:s'),
+            'admin_name' => $this->currentAdminName(),
             'chat_token' => $_SESSION['dct_hn_chat_token'],
             'lame_js_url' => lkn_hn_get_module_root_url() . '/assets/js/vendor/lame.min.js',
             'upload_max_bytes' => $this->uploadMaxBytes(),
@@ -100,5 +122,23 @@ final class WhatsAppChatController extends BaseController
         ]);
 
         return $limits ? min($limits) : 0;
+    }
+
+    private function currentAdminName(): string
+    {
+        try {
+            $adminId = (int) ($_SESSION['adminid'] ?? 0);
+
+            if ($adminId > 0) {
+                $admin = \WHMCS\Database\Capsule::table('tbladmins')->where('id', $adminId)->first(['firstname', 'lastname', 'username']);
+
+                if ($admin) {
+                    return trim("{$admin->firstname} {$admin->lastname}") ?: (string) $admin->username;
+                }
+            }
+        } catch (\Throwable) {
+        }
+
+        return 'Admin';
     }
 }

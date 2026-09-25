@@ -417,4 +417,24 @@ final class MetaWhatsAppApiClient extends BaseApiClient
 
         return $apiResponse;
     }
+
+    /**
+     * Marks an inbound message as read, so the customer sees blue ticks.
+     *
+     * @see https://developers.facebook.com/docs/whatsapp/cloud-api/guides/mark-message-as-read
+     *
+     * @since 5.14.0
+     */
+    public function markMessageAsRead(string $waMessageId): ApiResponse
+    {
+        $apiResponse = $this->apiCloud('POST', 'messages', [
+            'messaging_product' => 'whatsapp',
+            'status' => 'read',
+            'message_id' => $waMessageId,
+        ]);
+
+        lkn_hn_log(Platforms::WHATSAPP->value . ': markMessageAsRead', ['message_id' => $waMessageId], $apiResponse);
+
+        return $apiResponse;
+    }
 }

@@ -866,6 +866,7 @@ final class DatabaseUpgrade
 
             // 5.13.0: media columns on the chat history table.
             self::v5130AddChatMediaColumns();
+            self::v5140AddChatReadTracking();
         } catch (Throwable $th) {
             lkn_hn_log('Delivery tracking schema self-heal failed', [], ['exception' => $th->__toString()]);
         }
@@ -1086,6 +1087,40 @@ final class DatabaseUpgrade
             lkn_hn_log('Chat media columns added (v5130)', ['columns' => array_keys($missing)], []);
         } catch (Throwable $th) {
             lkn_hn_log('Chat media columns failed (v5130)', [], ['exception' => $th->__toString()]);
+        }
+    }
+
+    /**
+     * Adds per-message "read by an admin" tracking to the chat history, used
+     * for unread badges and to send read receipts (blue ticks) to Meta.
+     *
+     * Existing rows default to 1 (read) so the whole history doesn't show up
+     * as unread after upgrading; new inbound rows are inserted with 0.
+     *
+     * @since 5.14.0
+     */
+    public static function v5140AddChatReadTracking(): void
+    {
+        try {
+            if (!Capsule::schema()->hasTable('mod_dct_hook_notification_messages')) {
+                return;
+            }
+
+            $columns = Capsule::schema()->getColumnListing('mod_dct_hook_notification_messages');
+
+            if (in_array('admin_read', $columns, true)) {
+                return;
+            }
+
+            Capsule::connection()->statement(
+                'ALTER TABLE mod_dct_hook_notification_messages
+                 ADD COLUMN admin_read TINYINT(1) NOT NULL DEFAULT 1,
+                 ADD INDEX idx_phone_admin_read (phone_number, admin_read)'
+            );
+
+            lkn_hn_log('Chat read tracking column added (v5140)', [], []);
+        } catch (Throwable $th) {
+            lkn_hn_log('Chat read tracking column failed (v5140)', [], ['exception' => $th->__toString()]);
         }
     }
 }

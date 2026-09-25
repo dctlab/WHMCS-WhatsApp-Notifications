@@ -766,6 +766,11 @@ final class NotificationReportRepository extends BaseRepository
             'sent_at' => $sentAt->format('Y-m-d H:i:s'),
         ];
 
+        // Inbound messages start unread for the admin team (5.14.0+).
+        if ($direction === 'inbound' && $this->hasMessageColumn('admin_read')) {
+            $row['admin_read'] = 0;
+        }
+
         // Only the known media columns are accepted (5.13.0+).
         foreach (['media_id', 'media_mime', 'media_filename', 'media_path', 'media_size'] as $column) {
             if (array_key_exists($column, $media)) {
@@ -940,8 +945,11 @@ final class NotificationReportRepository extends BaseRepository
                 ->toArray();
         }
 
-        return $conversations->map(function ($row) use ($clientNames) {
-            $row->client_name = $clientNames[$row->client_id] ?? null;
+        $unread = $this->getUnreadCountsByPhone();
+
+        return $conversations->map(function ($row) use ($clientNames, $unread) {
+            $row->client_name  = $clientNames[$row->client_id] ?? null;
+            $row->unread_count = $unread[$row->phone_number] ?? 0;
 
             return $row;
         })->values()->toArray();
@@ -1149,6 +1157,145 @@ final class NotificationReportRepository extends BaseRepository
             'billable' => $billableCount,
             'free_or_unbilled' => $freeCount,
             'unknown' => $unknownCount,
+        ];
+    }
+
+    /** @var array<string, bool> */
+    private array $messageColumnCache = [];
+
+    private function hasMessageColumn(string $column): bool
+    {
+        if (!array_key_exists($column, $this->messageColumnCache)) {
+            $this->messageColumnCache[$column] = Capsule::schema()->hasColumn('mod_dct_hook_notification_messages', $column);
+        }
+
+        return $this->messageColumnCache[$column];
+    }
+
+    /**
+     * @since 5.14.0
+     *
+     * @return array<string, int> phone_number => unread inbound message count
+     */
+    public function getUnreadCountsByPhone(): array
+    {
+        if (!$this->hasMessageColumn('admin_read')) {
+            return [];
+        }
+
+        return $this->query->table('mod_dct_hook_notification_messages')
+            ->where('direction', 'inbound')
+            ->where('admin_read', 0)
+            ->groupBy('phone_number')
+            ->selectRaw('phone_number, COUNT(*) as total')
+            ->pluck('total', 'phone_number')
+            ->map(fn ($v) => (int) $v)
+            ->toArray();
+    }
+
+    /**
+     * Marks every unread inbound message of a contact as read and returns the
+     * WhatsApp id of the newest one that was unread (to send Meta a read
+     * receipt for), or null if nothing was unread.
+     *
+     * @since 5.14.0
+     */
+    public function markThreadReadByAdmin(string $phoneNumber): ?string
+    {
+        $phoneNumber = lkn_hn_normalize_phone_digits($phoneNumber);
+
+        if (!$phoneNumber || !$this->hasMessageColumn('admin_read')) {
+            return null;
+        }
+
+        $latest = $this->query->table('mod_dct_hook_notification_messages')
+            ->where('phone_number', $phoneNumber)
+            ->where('direction', 'inbound')
+            ->where('admin_read', 0)
+            ->whereNotNull('wa_message_id')
+            ->orderBy('sent_at', 'desc')
+            ->orderBy('id', 'desc')
+            ->value('wa_message_id');
+
+        $affected = $this->query->table('mod_dct_hook_notification_messages')
+            ->where('phone_number', $phoneNumber)
+            ->where('direction', 'inbound')
+            ->where('admin_read', 0)
+            ->update(['admin_read' => 1]);
+
+        return $affected > 0 && $latest ? (string) $latest : null;
+    }
+
+    /**
+     * Current delivery status of the latest outbound messages of a contact,
+     * so ticks already on screen can turn from sent -> delivered -> read.
+     *
+     * @since 5.14.0
+     *
+     * @return array<int, string> message id => status
+     */
+    public function getRecentOutboundStatuses(string $phoneNumber, int $limit = 100): array
+    {
+        $phoneNumber = lkn_hn_normalize_phone_digits($phoneNumber);
+
+        if (!$phoneNumber) {
+            return [];
+        }
+
+        return $this->query->table('mod_dct_hook_notification_messages')
+            ->where('phone_number', $phoneNumber)
+            ->where('direction', 'outbound')
+            ->orderBy('id', 'desc')
+            ->limit($limit)
+            ->pluck('status', 'id')
+            ->filter()
+            ->toArray();
+    }
+
+    /**
+     * Last time the contact wrote to us - drives the 24h reply window and the
+     * "last message" line in the chat header.
+     *
+     * @since 5.14.0
+     */
+    public function getLastInboundAt(string $phoneNumber): ?string
+    {
+        $phoneNumber = lkn_hn_normalize_phone_digits($phoneNumber);
+
+        if (!$phoneNumber) {
+            return null;
+        }
+
+        $value = $this->query->table('mod_dct_hook_notification_messages')
+            ->where('phone_number', $phoneNumber)
+            ->where('direction', 'inbound')
+            ->max('sent_at');
+
+        return $value ? (string) $value : null;
+    }
+
+    /**
+     * @since 5.14.0
+     *
+     * @return array{id: int, name: string, company: ?string, email: ?string}|null
+     */
+    public function getClientSummary(?int $clientId): ?array
+    {
+        if (!$clientId) {
+            return null;
+        }
+
+        $client = Capsule::table('tblclients')->where('id', $clientId)->first(['id', 'firstname', 'lastname', 'companyname', 'email']);
+
+        if (!$client) {
+            return null;
+        }
+
+        return [
+            'id' => (int) $client->id,
+            'name' => trim("{$client->firstname} {$client->lastname}"),
+            'company' => $client->companyname ?: null,
+            'email' => $client->email ?: null,
         ];
     }
 }

@@ -28,22 +28,48 @@ final class WhatsAppChatApiController
     }
 
     /**
-     * @return array{messages?: array, conversations?: array, error?: string}
+     * Live update for the chat page. Returns new messages for the open
+     * thread, the conversation list (with unread counts), current delivery
+     * statuses of recent outbound messages (tick updates) and contact info.
+     * With visible=1 the open thread is also marked read (and a read receipt
+     * is sent to WhatsApp).
+     *
+     * @return array<string, mixed>
      */
-    public function poll(string $phone, ?string $since = null): array
+    public function poll(?string $phone = null, ?string $since = null, ?string $visible = null): array
     {
         $this->requireAdminSession();
 
-        $newMessages = $since
-            ? $this->notificationReportService->getNewChatMessages($phone, new DateTime($since))
-            : $this->notificationReportService->getChatThread($phone);
+        // Don't hold the PHP session lock while querying - other chat
+        // requests (media, send) from the same admin would queue behind it.
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_write_close();
+        }
 
-        $conversations = $this->notificationReportService->getChatConversationsList();
+        $phone  = $phone !== null ? (string) lkn_hn_normalize_phone_digits($phone) : '';
+        $result = [];
 
-        return [
-            'messages' => array_map([$this, 'formatMessage'], $newMessages),
-            'conversations' => array_map([$this, 'formatConversation'], $conversations),
-        ];
+        if ($phone !== '') {
+            if ($visible === '1') {
+                $this->notificationReportService->markChatThreadRead($phone);
+            }
+
+            $messages = $since
+                ? $this->notificationReportService->getNewChatMessages($phone, new DateTime($since))
+                : $this->notificationReportService->getChatThread($phone);
+
+            $result['messages'] = array_map([$this, 'formatMessage'], $messages);
+            $result['statuses'] = $this->notificationReportService->getChatOutboundStatuses($phone);
+            $result['contact']  = $this->notificationReportService->getChatContactInfo($phone);
+        }
+
+        $conversations = array_map([$this, 'formatConversation'], $this->notificationReportService->getChatConversationsList());
+
+        $result['conversations'] = $conversations;
+        $result['unread_total']  = array_sum(array_column($conversations, 'unread_count'));
+        $result['server_time']   = (new DateTime())->format('Y-m-d H:i:s');
+
+        return $result;
     }
 
     /**
@@ -190,6 +216,7 @@ final class WhatsAppChatApiController
             'phone_number' => $conversation['phone_number'],
             'client_id' => $conversation['client_id'],
             'client_name' => $conversation['client_name'],
+            'unread_count' => (int) ($conversation['unread_count'] ?? 0),
             'last_message_preview' => $conversation['last_message_preview'],
             'last_message_direction' => $conversation['last_message_direction'],
             'last_message_at' => $conversation['last_message_at'] ? $conversation['last_message_at']->format('Y-m-d H:i:s') : null,
