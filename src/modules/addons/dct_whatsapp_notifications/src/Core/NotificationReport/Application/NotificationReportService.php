@@ -341,18 +341,24 @@ final class NotificationReportService
         DateTime $eventAt,
         ?string $messagePreview = null,
         ?string $waMessageId = null,
-    ): void {
+        string $messageType = 'text',
+        ?string $body = null,
+        array $media = [],
+    ): ?int {
         $clientId = $this->notificationReportRepository->guessClientIdByPhone($phoneNumber);
 
         $this->notificationReportRepository->recordInboundMessage($phoneNumber, $eventAt, $clientId, $messagePreview);
-        $this->notificationReportRepository->insertMessage(
+
+        return $this->notificationReportRepository->insertMessage(
             $phoneNumber,
             'inbound',
-            'text',
-            $messagePreview,
+            $messageType,
+            $messageType === 'text' ? $messagePreview : $body,
             $waMessageId,
             $eventAt,
             $clientId,
+            null,
+            $media,
         );
     }
 
@@ -450,7 +456,13 @@ final class NotificationReportService
     public function getPerformanceOverview(?string $dateFrom = null, ?string $dateTo = null): array
     {
         $from = $dateFrom ? new DateTime($dateFrom) : (new DateTime())->modify('-6 days');
-        $to   = $dateTo ? new DateTime($dateTo) : new DateTime();
+        // Same end-of-day fix as getAnalytics() above - getNotificationPerformance()
+        // trusts this DateTime's raw time component with no internal
+        // adjustment (unlike getDailyMessageActivity(), which already
+        // safely reformats to 23:59:59 internally regardless of what it's
+        // given) - so this must already cover the full day before either
+        // downstream call happens.
+        $to = $dateTo ? (new DateTime($dateTo))->setTime(23, 59, 59) : new DateTime();
 
         $analytics = $this->getAnalytics($from->format('Y-m-d'), $to->format('Y-m-d'));
 
@@ -478,7 +490,14 @@ final class NotificationReportService
     public function getAnalytics(?string $dateFrom = null, ?string $dateTo = null): array
     {
         $from = $dateFrom ? new DateTime($dateFrom) : null;
-        $to   = $dateTo ? new DateTime($dateTo) : null;
+        // $to must cover the whole day, not just its first instant - a
+        // bare "new DateTime('2026-08-12')" defaults to 00:00:00, which
+        // would make a "Today"/"Yesterday" range match only records
+        // created at exactly midnight, excluding virtually everything.
+        // Matches the same end-of-day pattern already used correctly in
+        // NotificationReportRepository::applyFilters() for the Reports
+        // page's own date_to handling.
+        $to = $dateTo ? (new DateTime($dateTo))->setTime(23, 59, 59) : null;
 
         return [
             'delivery' => $this->notificationReportRepository->getDeliveryStatusCounts($from, $to),
@@ -577,6 +596,9 @@ final class NotificationReportService
      */
     public function getChatThread(string $phoneNumber): array
     {
+        // Recover media for messages recorded before 5.13.0 (once per row).
+        (new ChatMediaService())->backfillLegacyRows($phoneNumber);
+
         return $this->formatMessagesForView(
             $this->notificationReportRepository->getMessagesForPhone($phoneNumber)
         );
@@ -600,13 +622,24 @@ final class NotificationReportService
     private function formatMessagesForView(array $rows): array
     {
         return array_map(
-            fn ($row) => [
-                'direction' => $row->direction,
-                'body' => $row->body,
-                'type' => $row->message_type,
-                'status' => $row->status,
-                'sent_at' => new DateTime($row->sent_at),
-            ],
+            function ($row) {
+                $type     = $row->message_type ?: 'text';
+                $hasMedia = !empty($row->media_id) || !empty($row->media_path);
+
+                return [
+                    'id' => (int) $row->id,
+                    'direction' => $row->direction,
+                    'body' => $row->body,
+                    'type' => $type,
+                    'status' => $row->status,
+                    'sent_at' => new DateTime($row->sent_at),
+                    'has_media' => $hasMedia,
+                    'media_mime' => $hasMedia ? ($row->media_mime ?? null) : null,
+                    'media_filename' => $row->media_filename ?? null,
+                    'media_size' => isset($row->media_size) ? (int) $row->media_size : null,
+                    'media_unavailable' => !$hasMedia && in_array($type, ['image', 'audio', 'video', 'document', 'sticker'], true),
+                ];
+            },
             $rows
         );
     }
@@ -659,6 +692,90 @@ final class NotificationReportService
             $now,
             $clientId,
             mb_substr($text, 0, 200),
+        );
+
+        return lkn_hn_result('success', data: ['wa_message_id' => $waMessageId]);
+    }
+
+    /**
+     * Sends an image, video, audio/voice note, document or sticker to a
+     * contact (Meta Cloud API; subject to the 24-hour customer service
+     * window) and records it in the chat history.
+     *
+     * @param array{name?: string, type?: string, tmp_name?: string, error?: int, size?: int} $uploadedFile
+     *
+     * @since 5.13.0
+     */
+    public function sendChatMedia(string $phoneNumber, array $uploadedFile, ?string $caption = null, bool $asDocument = false): Result
+    {
+        $settings = PlatformSettingsFactory::makeMetaWhatsAppSettings();
+
+        if (!$settings->enabled) {
+            return lkn_hn_result('error', errors: ['message' => lkn_hn_lang('The Meta WhatsApp platform is disabled.')]);
+        }
+
+        $client = (new PlatformApiClientFactory())->makeMetaWhatsAppClient($settings);
+
+        if (!$client->areSettingsFilled()) {
+            return lkn_hn_result('error', errors: ['message' => lkn_hn_lang('Meta WhatsApp settings are incomplete.')]);
+        }
+
+        $stored = (new ChatMediaService())->storeUpload($uploadedFile, $asDocument);
+
+        if (!$stored['ok']) {
+            return lkn_hn_result('error', errors: ['message' => $stored['error']]);
+        }
+
+        $upload = $client->uploadMedia($stored['path'], $stored['mime'], $stored['filename']);
+
+        if (empty($upload['id'])) {
+            @unlink($stored['path']);
+
+            return lkn_hn_result('error', errors: ['message' => $upload['error'] ?? lkn_hn_lang('Unknown error sending message.')]);
+        }
+
+        $caption     = $caption !== null ? trim($caption) : null;
+        $caption     = $caption === '' ? null : $caption;
+        $apiResponse = $client->sendMediaMessage($phoneNumber, $stored['type'], $upload['id'], $caption, $stored['filename']);
+
+        if (!isset($apiResponse->body['messages'][0]['id'])) {
+            @unlink($stored['path']);
+
+            $errorMessage = $apiResponse->body['error']['error_data']['details']
+                ?? $apiResponse->body['error']['message']
+                ?? lkn_hn_lang('Unknown error sending message.');
+
+            return lkn_hn_result('error', errors: ['message' => $errorMessage]);
+        }
+
+        $waMessageId = $apiResponse->body['messages'][0]['id'];
+        $now         = new DateTime();
+        $clientId    = $this->notificationReportRepository->guessClientIdByPhone($phoneNumber);
+        $isVoice     = $stored['type'] === 'audio' && str_starts_with((string) ($uploadedFile['name'] ?? ''), 'voice-');
+
+        $this->notificationReportRepository->insertMessage(
+            $phoneNumber,
+            'outbound',
+            $stored['type'],
+            in_array($stored['type'], ['image', 'video', 'document'], true) ? $caption : null,
+            $waMessageId,
+            $now,
+            $clientId,
+            'sent',
+            [
+                'media_id' => $upload['id'],
+                'media_mime' => $stored['mime'],
+                'media_filename' => $stored['filename'],
+                'media_path' => $stored['stored_name'],
+                'media_size' => $stored['size'],
+            ],
+        );
+
+        $this->notificationReportRepository->touchConversationForOutboundChat(
+            $phoneNumber,
+            $now,
+            $clientId,
+            ChatMediaService::previewLabel($stored['type'], $caption, $stored['filename'], $isVoice),
         );
 
         return lkn_hn_result('success', data: ['wa_message_id' => $waMessageId]);

@@ -737,11 +737,12 @@ final class NotificationReportRepository extends BaseRepository
         DateTime $sentAt,
         ?int $clientId,
         ?string $status = null,
-    ): void {
+        array $media = [],
+    ): ?int {
         $phoneNumber = lkn_hn_normalize_phone_digits($phoneNumber);
 
         if (!$phoneNumber) {
-            return;
+            return null;
         }
 
         if ($waMessageId) {
@@ -750,21 +751,108 @@ final class NotificationReportRepository extends BaseRepository
                 ->exists();
 
             if ($exists) {
-                return;
+                return null;
             }
         }
 
-        $this->query->table('mod_dct_hook_notification_messages')
-            ->insert([
-                'client_id' => $clientId,
-                'phone_number' => $phoneNumber,
-                'wa_message_id' => $waMessageId,
-                'direction' => $direction,
-                'message_type' => $messageType,
-                'body' => $body,
-                'status' => $status,
-                'sent_at' => $sentAt->format('Y-m-d H:i:s'),
-            ]);
+        $row = [
+            'client_id' => $clientId,
+            'phone_number' => $phoneNumber,
+            'wa_message_id' => $waMessageId,
+            'direction' => $direction,
+            'message_type' => $messageType,
+            'body' => $body,
+            'status' => $status,
+            'sent_at' => $sentAt->format('Y-m-d H:i:s'),
+        ];
+
+        // Only the known media columns are accepted (5.13.0+).
+        foreach (['media_id', 'media_mime', 'media_filename', 'media_path', 'media_size'] as $column) {
+            if (array_key_exists($column, $media)) {
+                $row[$column] = $media[$column];
+            }
+        }
+
+        return (int) $this->query->table('mod_dct_hook_notification_messages')->insertGetId($row);
+    }
+
+    /**
+     * @since 5.13.0
+     */
+    public function findMessageById(int $id): ?object
+    {
+        return $this->query->table('mod_dct_hook_notification_messages')->where('id', $id)->first();
+    }
+
+    /**
+     * @since 5.13.0
+     *
+     * @param array<string, mixed> $fields
+     */
+    public function updateMessageFields(int $id, array $fields): void
+    {
+        $allowed = array_intersect_key(
+            $fields,
+            array_flip(['message_type', 'body', 'media_id', 'media_mime', 'media_filename', 'media_path', 'media_size'])
+        );
+
+        if ($allowed === []) {
+            return;
+        }
+
+        $this->query->table('mod_dct_hook_notification_messages')->where('id', $id)->update($allowed);
+    }
+
+    /**
+     * Inbound rows recorded before 5.13.0 for media messages only stored a
+     * "[Image message]" style placeholder and no media id.
+     *
+     * @since 5.13.0
+     *
+     * @return object[]
+     */
+    public function getLegacyMediaPlaceholderRows(string $phoneNumber, int $limit = 50): array
+    {
+        $phoneNumber = lkn_hn_normalize_phone_digits($phoneNumber);
+
+        if (!$phoneNumber) {
+            return [];
+        }
+
+        return $this->query->table('mod_dct_hook_notification_messages')
+            ->where('phone_number', $phoneNumber)
+            ->where('direction', 'inbound')
+            ->where('message_type', 'text')
+            ->whereNull('media_id')
+            ->whereNull('media_mime')
+            ->whereNotNull('wa_message_id')
+            ->whereIn('body', ['[Image message]', '[Audio message]', '[Video message]', '[Document message]', '[Sticker message]'])
+            ->orderBy('id', 'desc')
+            ->limit($limit)
+            ->get()
+            ->toArray();
+    }
+
+    /**
+     * Finds the raw Meta webhook payload that carried a given inbound message
+     * id in WHMCS's module log (only present if module logging was enabled).
+     *
+     * @since 5.13.0
+     */
+    public function findWebhookLogResponseContaining(string $waMessageId): ?string
+    {
+        if (!Capsule::schema()->hasTable('tblmodulelog')) {
+            return null;
+        }
+
+        $value = $this->query->table('tblmodulelog')
+            ->where('module', 'dct_whatsapp_notifications')
+            ->where('action', 'WhatsApp webhook: received event')
+            ->where('response', 'like', '%' . addcslashes($waMessageId, '%_\\') . '%')
+            ->orderBy('id', 'desc')
+            ->value('response');
+
+        return $value !== null ? (string) $value : null;
     }
 
     public function updateMessageStatusByWaId(string $waMessageId, string $status): void
@@ -808,7 +896,9 @@ final class NotificationReportRepository extends BaseRepository
 
         return $this->query->table('mod_dct_hook_notification_messages')
             ->where('phone_number', $phoneNumber)
-            ->where('sent_at', '>', $since->format('Y-m-d H:i:s'))
+            // >= (not >): messages sharing the last-seen second would otherwise
+            // be skipped; the chat page de-duplicates by message id.
+            ->where('sent_at', '>=', $since->format('Y-m-d H:i:s'))
             ->orderBy('sent_at', 'asc')
             ->get()
             ->toArray();

@@ -3,7 +3,9 @@
 namespace Dct\HookNotification\Core\Platforms\MetaWhatsApp\Http\Controllers;
 
 use DateTime;
+use Dct\HookNotification\Core\NotificationReport\Application\ChatMediaService;
 use Dct\HookNotification\Core\NotificationReport\Application\NotificationReportService;
+use Dct\HookNotification\Core\NotificationReport\Infrastructure\NotificationReportRepository;
 use Dct\HookNotification\Core\Shared\Infrastructure\Config\Settings;
 use Dct\HookNotification\Core\Shared\Infrastructure\Setup\DatabaseUpgrade;
 use Throwable;
@@ -217,20 +219,86 @@ final class MetaWebhookController
 
         $type = $message['type'] ?? 'unknown';
 
+        // 5.13.0: image/audio/video/document/sticker messages keep their media
+        // id so the file can be downloaded and shown in the chat view.
+        $media = ChatMediaService::extractInboundMedia($message);
+
+        if ($media !== null) {
+            $messageId = $this->notificationReportService->recordInboundMessage(
+                $from,
+                $eventAt,
+                ChatMediaService::previewLabel($media['type'], $media['caption'], $media['filename'], $media['voice']),
+                $message['id'] ?? null,
+                $media['type'],
+                $media['caption'],
+                [
+                    'media_id' => $media['media_id'],
+                    'media_mime' => $media['mime'],
+                    'media_filename' => $media['filename'],
+                ],
+            );
+
+            if ($messageId) {
+                $this->queueMediaDownload($messageId);
+            }
+
+            return;
+        }
+
         $preview = match ($type) {
             'text' => mb_substr(trim((string) ($message['text']['body'] ?? '')), 0, 200),
             'button' => $message['button']['text'] ?? '[Button reply]',
             'interactive' => $message['interactive']['button_reply']['title']
                 ?? $message['interactive']['list_reply']['title']
                 ?? '[Interactive reply]',
+            'location' => '[Location] ' . trim(($message['location']['name'] ?? '') . ' ' . ($message['location']['address'] ?? '')
+                . ' (' . ($message['location']['latitude'] ?? '?') . ', ' . ($message['location']['longitude'] ?? '?') . ')'),
+            'contacts' => '[Contact] ' . ($message['contacts'][0]['name']['formatted_name'] ?? ''),
+            'reaction' => '[Reaction] ' . ($message['reaction']['emoji'] ?? ''),
             default => '[' . ucfirst((string) $type) . ' message]',
         };
 
         $this->notificationReportService->recordInboundMessage(
             $from,
             $eventAt,
-            $preview !== '' ? $preview : null,
+            $preview !== '' ? trim($preview) : null,
             $message['id'] ?? null,
         );
+    }
+
+    /** @var int[] */
+    private array $pendingMediaDownloads = [];
+
+    /**
+     * Downloads inbound media right after the 200 response has been sent to
+     * Meta (PHP-FPM fastcgi_finish_request), so the webhook stays fast and
+     * the file is cached locally even if nobody opens the chat within the
+     * ~30 days Meta keeps it. If this fails, the chat view downloads it
+     * on first view instead.
+     */
+    private function queueMediaDownload(int $messageId): void
+    {
+        if ($this->pendingMediaDownloads === []) {
+            register_shutdown_function(function (): void {
+                if (function_exists('fastcgi_finish_request')) {
+                    fastcgi_finish_request();
+                }
+
+                @set_time_limit(120);
+
+                $service    = new ChatMediaService();
+                $repository = new NotificationReportRepository();
+
+                foreach ($this->pendingMediaDownloads as $id) {
+                    $row = $repository->findMessageById($id);
+
+                    if ($row) {
+                        $service->ensureLocalFile($row);
+                    }
+                }
+            });
+        }
+
+        $this->pendingMediaDownloads[] = $messageId;
     }
 }

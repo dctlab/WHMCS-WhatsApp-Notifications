@@ -3,6 +3,7 @@
 namespace Dct\HookNotification\Core\NotificationReport\Http\Controllers;
 
 use DateTime;
+use Dct\HookNotification\Core\NotificationReport\Application\ChatMediaService;
 use Dct\HookNotification\Core\NotificationReport\Application\NotificationReportService;
 
 /**
@@ -54,6 +55,7 @@ final class WhatsAppChatApiController
     public function send(): array
     {
         $this->requireAdminSession();
+        $this->requireCsrfToken();
 
         $phone = trim((string) ($_GET['phone'] ?? ''));
         $body  = json_decode(file_get_contents('php://input'), true) ?? [];
@@ -78,12 +80,105 @@ final class WhatsAppChatApiController
     private function formatMessage(array $message): array
     {
         return [
+            'id' => $message['id'] ?? null,
             'direction' => $message['direction'],
             'body' => $message['body'],
             'type' => $message['type'],
             'status' => $message['status'],
             'sent_at' => $message['sent_at']->format('Y-m-d H:i:s'),
+            'has_media' => $message['has_media'] ?? false,
+            'media_mime' => $message['media_mime'] ?? null,
+            'media_filename' => $message['media_filename'] ?? null,
+            'media_size' => $message['media_size'] ?? null,
+            'media_unavailable' => $message['media_unavailable'] ?? false,
         ];
+    }
+
+    /**
+     * Streams a chat message's image/audio/video/document to the admin
+     * (downloading it from Meta first if it isn't cached yet).
+     *
+     * GET api.php?endpoint=chat/media&id={messageId}[&download=1]
+     *
+     * @since 5.13.0
+     */
+    public function media(string $id, ?string $download = null): array
+    {
+        $this->requireAdminSession();
+
+        // Release the session lock so other chat requests aren't blocked
+        // while a large file downloads/streams.
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_write_close();
+        }
+
+        (new ChatMediaService())->stream((int) $id, $download === '1');
+
+        return [];
+    }
+
+    /**
+     * Sends a file attachment or recorded voice note.
+     *
+     * POST (multipart/form-data) api.php?endpoint=chat/send-media&phone={phone}
+     * fields: file, caption (optional), as_document (optional "1")
+     *
+     * @since 5.13.0
+     *
+     * @return array{success: bool, error?: string}
+     */
+    public function sendMedia(): array
+    {
+        $this->requireAdminSession();
+        $this->requireCsrfToken();
+
+        $phone = trim((string) ($_GET['phone'] ?? ''));
+
+        if ($phone === '') {
+            return ['success' => false, 'error' => 'Phone is required.'];
+        }
+
+        if (empty($_FILES['file'])) {
+            // post_max_size exceeded empties $_POST and $_FILES entirely.
+            return ['success' => false, 'error' => 'No file received - it may exceed the server post_max_size / upload_max_filesize limit.'];
+        }
+
+        @set_time_limit(180);
+
+        $result = $this->notificationReportService->sendChatMedia(
+            $phone,
+            $_FILES['file'],
+            isset($_POST['caption']) ? (string) $_POST['caption'] : null,
+            !empty($_POST['as_document']),
+        );
+
+        if ($result->code !== 'success') {
+            return ['success' => false, 'error' => $result->errors['message'] ?? 'Failed to send file.'];
+        }
+
+        return ['success' => true];
+    }
+
+    /**
+     * Per-session token issued by WhatsAppChatController::viewChat() and sent
+     * back by the chat page in the X-DCT-Chat-Token header. Blocks cross-site
+     * requests from making a logged-in admin send WhatsApp messages.
+     *
+     * @since 5.13.0
+     */
+    private function requireCsrfToken(): void
+    {
+        $expected = (string) ($_SESSION['dct_hn_chat_token'] ?? '');
+        $received = (string) ($_SERVER['HTTP_X_DCT_CHAT_TOKEN'] ?? $_POST['dct_chat_token'] ?? '');
+
+        if ($expected !== '' && $received !== '' && hash_equals($expected, $received)) {
+            return;
+        }
+
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['success' => false, 'error' => 'Security token expired - please reload the page and try again.']);
+        exit;
     }
 
     /**

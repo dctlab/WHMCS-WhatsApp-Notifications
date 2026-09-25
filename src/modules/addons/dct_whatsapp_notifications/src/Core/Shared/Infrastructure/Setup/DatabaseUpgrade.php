@@ -863,6 +863,9 @@ final class DatabaseUpgrade
                 lkn_hn_log('Delivery tracking schema self-heal: applying v455', [], []);
                 self::v455();
             }
+
+            // 5.13.0: media columns on the chat history table.
+            self::v5130AddChatMediaColumns();
         } catch (Throwable $th) {
             lkn_hn_log('Delivery tracking schema self-heal failed', [], ['exception' => $th->__toString()]);
         }
@@ -1040,6 +1043,49 @@ final class DatabaseUpgrade
                 [],
                 ['exception' => $th->__toString()]
             );
+        }
+    }
+
+    /**
+     * Adds media metadata columns to the chat history table so image, audio,
+     * video, document and sticker messages can be displayed and sent from the
+     * WhatsApp Conversations page.
+     *
+     * Additive only and idempotent (checks each column first) - safe to call
+     * from ensureDeliveryTrackingSchema() on every request.
+     *
+     * @since 5.13.0
+     */
+    public static function v5130AddChatMediaColumns(): void
+    {
+        try {
+            if (!Capsule::schema()->hasTable('mod_dct_hook_notification_messages')) {
+                return;
+            }
+
+            $columns = Capsule::schema()->getColumnListing('mod_dct_hook_notification_messages');
+
+            $definitions = [
+                'media_id' => 'ADD COLUMN media_id VARCHAR(255) COLLATE utf8mb4_unicode_ci NULL',
+                'media_mime' => 'ADD COLUMN media_mime VARCHAR(150) COLLATE utf8mb4_unicode_ci NULL',
+                'media_filename' => 'ADD COLUMN media_filename VARCHAR(255) COLLATE utf8mb4_unicode_ci NULL',
+                'media_path' => 'ADD COLUMN media_path VARCHAR(500) COLLATE utf8mb4_unicode_ci NULL',
+                'media_size' => 'ADD COLUMN media_size INT UNSIGNED NULL',
+            ];
+
+            $missing = array_diff_key($definitions, array_flip($columns));
+
+            if ($missing === []) {
+                return;
+            }
+
+            Capsule::connection()->statement(
+                'ALTER TABLE mod_dct_hook_notification_messages ' . implode(', ', $missing)
+            );
+
+            lkn_hn_log('Chat media columns added (v5130)', ['columns' => array_keys($missing)], []);
+        } catch (Throwable $th) {
+            lkn_hn_log('Chat media columns failed (v5130)', [], ['exception' => $th->__toString()]);
         }
     }
 }

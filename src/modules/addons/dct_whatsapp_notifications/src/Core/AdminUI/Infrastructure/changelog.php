@@ -2,6 +2,28 @@
 
 return [
     [
+        'version' => '5.13.0',
+        'date' => '2026-09-25',
+        'changes' => [
+            'New: WhatsApp Conversations now shows received media instead of "[Image message]" / "[Audio message]" placeholders - images and stickers inline (click to open full size), voice notes and audio with a player, videos with a player, and documents as a download card with file name and size. Media is downloaded from the Meta Cloud API right after the webhook responds (fastcgi_finish_request) and cached in the WHMCS attachments directory (dct_whatsapp_media/), outside the web root; if that fails it is downloaded on first view.',
+            'New: send images, videos, audio files, documents and voice messages from the chat. Attach with the paperclip, paste an image, or drag and drop a file; images/videos/documents can carry a caption, and images/videos can be sent as a document to keep original quality. Oversized or non-WhatsApp formats (GIF, HEIC, WebP photos, large videos) are sent as documents automatically (100 MB max).',
+            'New: voice recorder. Firefox records OGG/Opus natively (a true WhatsApp voice note); Chrome/Edge/Safari record to MP3 in the browser via the bundled lamejs encoder (assets/js/vendor), because WhatsApp rejects the WebM audio those browsers produce by default.',
+            'Older media messages (recorded before 5.13.0 with only a placeholder) are recovered automatically from the WHMCS module log when module logging was enabled and Meta still holds the file (about 30 days); otherwise they are shown as "media no longer available".',
+            'New: emoji picker (smiley button) in the message box - Recent, Smileys, Gestures, Hearts, Business and Symbols tabs plus keyword search (e.g. "invoice", "thanks", "ok"); inserts at the cursor and stays open for several picks (Shift+click or Esc to close). Recently used emoji are remembered per browser.',
+            'Location, contact and reaction messages now show a readable preview instead of "[Location message]" etc.',
+            'Security: the chat send endpoints (chat/send, chat/send-media) now require a per-session token (X-DCT-Chat-Token) in addition to the admin session, blocking cross-site request forgery. Media is only streamed to logged-in admins, with nosniff/sandbox headers; documents are always served as downloads. The access token is only ever sent to Meta CDN hosts when downloading media.',
+            'Database: additive columns media_id, media_mime, media_filename, media_path, media_size on mod_dct_hook_notification_messages (v5130AddChatMediaColumns, also applied by the per-request self-heal). The chat poll now uses >= on the last timestamp with client-side de-duplication by message id, so messages sharing the same second are no longer missed.',
+        ],
+    ],
+    [
+        'version' => '5.12.1',
+        'date' => '2026-08-12',
+        'changes' => [
+            'Fix: Analytics and Dashboard "Today" and "Yesterday" date presets showed "No analytics data available" even with real activity that day (confirmed via a Reports screenshot showing a real notification at 2026-08-12 02:00:32, while Analytics "Today" for the same date showed nothing). Root cause: constructing new DateTime("2026-08-12") defaults to midnight (00:00:00) - so a "Today" range built from date-only strings became created_at >= 00:00:00 AND created_at <= 00:00:00, an instant rather than a day, excluding almost everything. "Last 7 Days"/"Last 30 Days"/custom ranges were affected too, just less visibly, since only the final day of any range was ever cut off this way.',
+            'Fixed by extending the end-of-range boundary to 23:59:59 in both getAnalytics() and getPerformanceOverview() (the method both Dashboard and Analytics share) - matching a pattern that was actually already correct elsewhere in this codebase (NotificationReportRepository applies the same 23:59:59 fix for the Reports page own date filtering), which should have been followed when this newer Dashboard/Analytics date-range code was written in Phases 2 and 5. Start-of-range boundaries were already correct (midnight is the right start time) and were not changed.',
+        ],
+    ],
+    [
         'version' => '5.12.0',
         'date' => '2026-08-11',
         'changes' => [

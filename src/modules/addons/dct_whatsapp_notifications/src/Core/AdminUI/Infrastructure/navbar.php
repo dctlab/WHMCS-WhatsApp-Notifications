@@ -159,7 +159,7 @@ return [
                 ],
                 [
                     'icon' => 'glyphicon glyphicon-download',
-                    'label' => 'v5.12.0',
+                    'label' => 'v5.12.1',
                     'external' => true,
                     'url' => 'https://dctlab.directcybertech.com/'
                 ]

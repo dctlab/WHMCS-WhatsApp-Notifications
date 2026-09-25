@@ -36,6 +36,14 @@ final class ApiHandler extends Singleton {
                 WhatsAppChatApiController::class,
                 'send',
             ],
+            'chat/send-media' => [
+                WhatsAppChatApiController::class,
+                'sendMedia',
+            ],
+            'chat/media' => [
+                WhatsAppChatApiController::class,
+                'media',
+            ],
             'test-send' => [
                 \Dct\HookNotification\Core\TestSend\Http\Controllers\TestSendController::class,
                 'send',
